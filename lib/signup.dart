@@ -1,4 +1,4 @@
-import 'dart:async';
+import 'dart:async' show Timer;
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -21,24 +21,20 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  String? _selectedProvince;
   String? _selectedDistrict;
 
   bool _isPasswordObscured = true;
   bool _isConfirmPasswordObscured = true;
   bool _isLoading = false;
+  
   bool _isNicTaken = false;
   bool _isCheckingNic = false;
+  bool _nicCheckError = false; 
   String _nicErrorText = '';
   Timer? _debounce;
 
   bool? _doPasswordsMatch;
   String _passwordMatchError = '';
-
-  final List<String> _provinces = [
-    'Western', 'Central', 'Southern', 'Northern', 'Eastern',
-    'North Western', 'North Central', 'Uva', 'Sabaragamuwa'
-  ];
 
   final List<String> _districts = [
     'Ampara', 'Anuradhapura', 'Badulla', 'Batticaloa', 'Colombo',
@@ -52,8 +48,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void initState() {
     super.initState();
     _nicController.addListener(_onNicChanged);
-    _passwordController.addListener(_onPasswordChanged);
-    _confirmPasswordController.addListener(_onConfirmPasswordChanged);
+    _passwordController.addListener(_checkPasswordMatch);
+    _confirmPasswordController.addListener(_checkPasswordMatch);
   }
 
   @override
@@ -67,14 +63,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
-  }
-
-  void _onPasswordChanged() {
-    _checkPasswordMatch();
-  }
-
-  void _onConfirmPasswordChanged() {
-    _checkPasswordMatch();
   }
 
   void _checkPasswordMatch() {
@@ -107,6 +95,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         setState(() {
           _isCheckingNic = false;
           _isNicTaken = false;
+          _nicCheckError = false;
           _nicErrorText = '';
         });
         return;
@@ -115,6 +104,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       setState(() {
         _isCheckingNic = true;
         _nicErrorText = '';
+        _nicCheckError = false;
       });
 
       try {
@@ -132,6 +122,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         setState(() {
           _isCheckingNic = false;
           _isNicTaken = false;
+          _nicCheckError = true; 
         });
       }
     });
@@ -159,6 +150,22 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
+      final nic = _nicController.text.trim();
+      final finalCheck = await FirebaseFirestore.instance
+          .collection('users')
+          .where('nic', isEqualTo: nic)
+          .get();
+
+      if (finalCheck.docs.isNotEmpty) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Duplicate NIC detected. Registration blocked.')),
+        );
+        return;
+      }
+
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -166,15 +173,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (userCredential.user != null) {
         final String uid = userCredential.user!.uid;
+        
+        // Removed province from Firestore payload
         await FirebaseFirestore.instance.collection('users').doc(uid).set({
           'uid': uid,
           'fullName': _fullNameController.text.trim(),
-          'nic': _nicController.text.trim(),
+          'nic': nic,
           'email': _emailController.text.trim(),
           'mobilePhone': _mobileController.text.trim(),
-          'province': _selectedProvince,
           'district': _selectedDistrict,
           'gnDivision': _gnDivisionController.text.trim(),
+          'status': 'inactive',
           'createdAt': Timestamp.now(),
         });
 
@@ -182,7 +191,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         await FirebaseAuth.instance.signOut();
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration Successful! Check your email to verify.')),
+          const SnackBar(content: Text('Registration Successful! Please wait for admin approval.')),
         );
 
         _fullNameController.clear();
@@ -193,7 +202,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
         _passwordController.clear();
         _confirmPasswordController.clear();
         setState(() {
-          _selectedProvince = null;
           _selectedDistrict = null;
         });
       }
@@ -346,17 +354,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFC2185B)),
                           ),
                         )
-                      : (_isNicTaken
-                          ? const Icon(Icons.close, color: Colors.red)
-                          : (_nicController.text.trim().length >= 6
-                              ? const Icon(Icons.check, color: Colors.green)
-                              : null)),
+                      : (_nicCheckError
+                          ? const Icon(Icons.error_outline, color: Colors.orange) 
+                          : (_isNicTaken
+                              ? const Icon(Icons.close, color: Colors.red) 
+                              : (_nicController.text.trim().length >= 6
+                                  ? const Icon(Icons.check, color: Colors.green) 
+                                  : null))),
                 ),
-                const SizedBox(height: 16),
-
-                _buildDropdown('Select Province', _provinces, _selectedProvince, (value) {
-                  setState(() => _selectedProvince = value);
-                }),
                 const SizedBox(height: 16),
 
                 _buildDropdown('Select District', _districts, _selectedDistrict, (value) {
