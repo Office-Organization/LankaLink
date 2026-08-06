@@ -48,13 +48,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Forgot Password')),
+      appBar: AppBar(
+        title: const Text('Forgot Password'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.black,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.lock_reset, size: 80, color: Colors.blue),
+            const Icon(Icons.lock_reset, size: 80, color: Color(0xFFC2185B)),
             const SizedBox(height: 20),
             const Text(
               'Reset your password',
@@ -69,7 +74,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             const SizedBox(height: 30),
             TextField(
               controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                filled: true,
+                fillColor: const Color(0xFFF3F4F6),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              ),
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 24),
@@ -77,6 +91,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ? const CircularProgressIndicator()
                 : SizedBox(
                     width: double.infinity,
+                    height: 50,
                     child: ElevatedButton(
                       onPressed: _sendResetLink,
                       child: const Text('Send Reset Link'),

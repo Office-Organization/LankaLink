@@ -21,12 +21,25 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Lanka Link',
       theme: ThemeData(
-        primaryColor: const Color(0xFFC2185B),
-        colorScheme: ColorScheme.fromSwatch().copyWith(
-          primary: const Color(0xFFC2185B),
-          secondary: const Color(0xFFC2185B),
-        ),
         useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFFC2185B),
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFFC2185B),
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        elevatedButtonTheme: ElevatedButtonThemeData(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFC2185B),
+            foregroundColor: Colors.white,
+            shape: const StadiumBorder(),
+            elevation: 3,
+          ),
+        ),
       ),
       home: const AuthGate(),
     );
@@ -197,8 +210,6 @@ class DashboardScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
-        backgroundColor: const Color(0xFFC2185B),
-        foregroundColor: Colors.white,
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -230,10 +241,6 @@ class DashboardScreen extends StatelessWidget {
               },
               icon: const Icon(Icons.exit_to_app),
               label: const Text('Sign Out'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFC2185B),
-                foregroundColor: Colors.white,
-              ),
             ),
           ],
         ),
