@@ -14,7 +14,15 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final User? user = FirebaseAuth.instance.currentUser;
-  String _fullName = 'පරිශීලක'; // Default to "User" in Sinhala
+  String _fullName = 'පරිශීලක';
+  int? _selectedCardIndex;
+
+  // Government-style color palette
+  static const Color primaryNavy = Color(0xFF0B1E3D);      // Deep navy
+  static const Color accentGold = Color(0xFFC6A962);       // Muted gold
+  static const Color cardBg = Color(0xFFF4F7FC);           // Light grey-blue
+  static const Color confirmColor = Color(0xFF1E3A6B);     // Rich blue
+  static const Color textDark = Color(0xFF1A1A1A);
 
   @override
   void initState() {
@@ -45,12 +53,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) {
-      return 'සුභ උදෑසනක්'; // Good morning
-    } else if (hour < 16) {
-      return 'සුභ දහවලක්'; // Good afternoon
-    } else {
-      return 'සුභ සන්ධ්‍යාවක්'; // Good evening
+    if (hour < 12) return 'සුභ උදෑසනක්';
+    if (hour < 16) return 'සුභ දහවලක්';
+    return 'සුභ සන්ධ්‍යාවක්';
+  }
+
+  void _handleConfirm() {
+    if (_selectedCardIndex == null) return;
+    if (_selectedCardIndex == 0) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const FamilyDetailsScreen()));
+    } else if (_selectedCardIndex == 1) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const GNDetailsScreen()));
     }
   }
 
@@ -59,128 +72,259 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.black54),
-            onPressed: () => _logout(context),
-            tooltip: 'ඉවත් වන්න (Logout)',
-          )
-        ],
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              // --- Profile Image & Details ---
-              const CircleAvatar(
-                radius: 45,
-                backgroundColor: Color(0xFFF3F4F6),
-                child: Icon(Icons.person, size: 55, color: Colors.grey),
+        backgroundColor: primaryNavy,
+        elevation: 2,
+        titleSpacing: 0,
+        title: Row(
+          children: [
+            const SizedBox(width: 12),
+            Icon(Icons.account_balance, color: accentGold, size: 28),
+            const SizedBox(width: 12),
+            Text(
+              'LankaLink Dashboard',
+              style: TextStyle(
+                fontFamily: 'UN-Imanee', // මෙතන අකුරු මුහුණත නිවැරදිව සකසා ඇත
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+                color: Colors.white,
+                letterSpacing: 0.5,
               ),
-              const SizedBox(height: 16),
-              Text(
-                '${_getGreeting()}, $_fullName',
-                style: const TextStyle(fontSize: 18, color: Colors.black87),
-              ),
-              const SizedBox(height: 8),
-              
-              // --- Large Welcome Text from Image ---
-              const Text(
-                'ආයුබෝවන්',
-                style: TextStyle(
-                  fontSize: 34, 
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(height: 50),
-
-              // --- Grey Navigation Buttons ---
-              _buildGreyButton(
-                context,
-                title: 'පවුල් තොරතුරු',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const FamilyDetailsScreen()),
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-              _buildGreyButton(
-                context,
-                title: 'ග්‍රාම නිලධාරී වසමට\nඅදාල තොරතුරු',
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const GNDetailsScreen()),
-                  );
-                },
-              ),
-              
-              const Spacer(),
-              
-              // --- Red Start Button ---
-              SizedBox(
-                width: 220, 
-                height: 55,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFFF4F33), // Red/Orange color from image
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 4,
-                  ),
-                  onPressed: () {
-                    // TODO: Define start button action
-                  },
-                  child: const Text(
-                    'පටන් ගන්න',
-                    style: TextStyle(fontSize: 22, color: Colors.white, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 40),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Custom widget to recreate the exact grey button style in the image
-  Widget _buildGreyButton(BuildContext context, {required String title, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFFE5E7EB), // Light grey matching the image
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
             ),
           ],
         ),
-        child: Text(
-          title,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontSize: 18,
-            color: Colors.black,
-            fontWeight: FontWeight.w600,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: IconButton(
+              icon: const Icon(Icons.logout, color: Colors.white70),
+              onPressed: () => _logout(context),
+              tooltip: 'ඉවත් වන්න',
+            ),
           ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Greeting header with gold accent line
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x0D000000),
+                    blurRadius: 8,
+                    offset: Offset(0, 2),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${_getGreeting()}, $_fullName!',
+                    style: const TextStyle(
+                      fontFamily: 'UN-Imanee',
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: primaryNavy,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    height: 2,
+                    width: 60,
+                    decoration: BoxDecoration(
+                      color: accentGold,
+                      borderRadius: BorderRadius.circular(1),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Main content area
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  children: [
+                    // Selectable cards with government-style cards
+                    _buildGovSelectableCard(
+                      index: 0,
+                      title: 'පවුල් තොරතුරු',
+                      subtitle: 'පවුලේ සාමාජිකයින් පිළිබඳ විස්තර',
+                      icon: Icons.family_restroom,
+                      accent: const Color(0xFFD4843A),  // Warm orange
+                    ),
+                    const SizedBox(height: 20),
+                    _buildGovSelectableCard(
+                      index: 1,
+                      title: 'ග්‍රාම නිලධාරී වසමට අදාල තොරතුරු',
+                      subtitle: 'නිලධාරී වසම් තොරතුරු හා සේවාවන්',
+                      icon: Icons.location_city,
+                      accent: const Color(0xFF2E7D32),  // Official green
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Confirm button with government-style gradient
+                    SizedBox(
+                      width: double.infinity,
+                      height: 54,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: EdgeInsets.zero,
+                        ),
+                        onPressed: _selectedCardIndex != null ? _handleConfirm : null,
+                        child: Ink(
+                          decoration: BoxDecoration(
+                            gradient: _selectedCardIndex != null
+                                ? const LinearGradient(
+                                    colors: [confirmColor, Color(0xFF2A5298)],
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                  )
+                                : LinearGradient(
+                                    colors: [Colors.grey.shade400, Colors.grey.shade400],
+                                  ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: _selectedCardIndex != null
+                                ? [
+                                    BoxShadow(
+                                      color: confirmColor.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    )
+                                  ]
+                                : [],
+                          ),
+                          child: Center(
+
+
+                            
+                            child: Text(
+                              'පටන් ගන්න',
+                              style: TextStyle(
+fontFamily: 'UN-Sandhyanee',                                fontSize: 22,
+                                color: const Color.fromARGB(255, 244, 234, 234),
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+
+  Widget _buildGovSelectableCard({
+    required int index,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color accent,
+  }) {
+    final bool isSelected = _selectedCardIndex == index;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCardIndex = index),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? accent : Colors.grey.shade200,
+            width: isSelected ? 2 : 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: isSelected
+                  ? accent.withOpacity(0.12)
+                  : Colors.black.withOpacity(0.04),
+              blurRadius: isSelected ? 12 : 6,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Icon with subtle background
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: accent.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 30, color: accent),
+            ),
+            const SizedBox(width: 18),
+            // Title and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontFamily: 'UN-Imanee',
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontFamily: 'UN-Imanee',
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                      height: 1.2,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Custom radio button
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? accent : Colors.grey.shade400,
+                  width: 2,
+                ),
+                color: isSelected ? accent : Colors.transparent,
+              ),
+              child: isSelected
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  } 
 }
