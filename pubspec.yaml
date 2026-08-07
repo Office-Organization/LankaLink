@@ -1,33 +1,27 @@
 name: lankalink
 description: "A new Flutter project."
-<<<<<<< Updated upstream
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
-=======
-publish_to: 'none'
->>>>>>> Stashed changes
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.5.0 # Use whatever your current SDK version is
+  sdk: ^3.10.7
 
 dependencies:
   flutter:
     sdk: flutter
-<<<<<<< Updated upstream
 
   firebase_core: ^4.13.0
   firebase_auth: ^6.5.7
-=======
->>>>>>> Stashed changes
   cupertino_icons: ^1.0.8
+  cloud_firestore: ^6.8.0
+  firebase_storage: ^13.4.6
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-<<<<<<< Updated upstream
   flutter_lints: ^6.0.0
 
 flutter:
@@ -51,20 +45,3 @@ flutter:
       fonts:
         - asset: assets/fonts/UN-Sandhyanee.ttf
           weight: 400
-=======
-  flutter_lints: ^4.0.0
-
-flutter:
-  uses-material-design: true
-
-  # Custom assets and fonts are declared here
-  assets:
-    - assets/images/ # Optional: If you have images later
-
-  fonts:
-    - family: Poppins # The name you will use in your Dart code
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Bold.ttf
-          weight: 700
->>>>>>> Stashed changes
