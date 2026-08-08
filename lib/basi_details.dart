@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'housing_details.dart'; // අලුතින් සාදන ලද පිටුවට යොමු වීමට
 
 class BasicDetailsScreen extends StatefulWidget {
+  final String surveyDocId; // Step 1 හි සාදන ලද Document ID
   final String houseNumber;
-  final List<String> nics;
+  final String householderNic;
 
   const BasicDetailsScreen({
     super.key,
+    required this.surveyDocId,
     required this.houseNumber,
-    required this.nics,
+    required this.householderNic,
   });
 
   @override
@@ -35,8 +38,50 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
   final List<String> _nationalities = ['සිංහල', 'දෙමළ', 'මුස්ලිම්'];
 
   // --- Children List State ---
-  // Each child will be stored as a Map: {nic, name, school, dob, gender, attendsSchool, specialNeeds, assistance}
   List<Map<String, String>> _childrenList = [];
+
+  @override
+  void initState() {
+    super.initState();
+    // පළමු පිටුවෙන් ලැබුණු NIC එක සහ නම Load කිරීම (Read only)
+    _nicController.text = widget.householderNic;
+    _loadSurveyData();
+  }
+
+  // --- 🔥 නව: survey_responses වෙතින් පවතින දත්ත ලබා ගැනීම (Auto Fill) ---
+  Future<void> _loadSurveyData() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('survey_responses')
+          .doc(widget.surveyDocId)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data()!;
+        final householder = data['householder'] as Map<String, dynamic>? ?? {};
+
+        setState(() {
+          _nameController.text = householder['fullName'] ?? '';
+          _householderGender = householder['gender'] ?? 'Male';
+
+          // දත්ත දැනටමත් Save කර ඇත්නම් (Step 2 start කර ඇත්නම්) ඒවා පිරවීම
+          _dobController.text = householder['dateOfBirth'] ?? '';
+          _phoneController.text = householder['phone'] ?? '';
+          _emailController.text = householder['email'] ?? '';
+          _selectedNationality = householder['nationality'] ?? 'සිංහල';
+          _samurdhiStatus = (data['samurdhiStatus'] == true) ? 'Yes' : 'No';
+
+          // දරුවන් පිළිබඳ දත්ත පිරවීම
+          List<dynamic> childrenList = data['children'] as List<dynamic>? ?? [];
+          _childrenList = childrenList
+              .map((c) => Map<String, String>.from(c as Map))
+              .toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading survey data: $e');
+    }
+  }
 
   @override
   void dispose() {
@@ -48,11 +93,13 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
     super.dispose();
   }
 
-  // --- Firestore Save Logic (Batch Write) ---
+  // --- 🔥 Firestore Save Logic (Merge to 'survey_responses') ---
   Future<void> _saveAllDetails() async {
     if (_nicController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('කරුණාකර ගෘහ මූලිකයාගේ ජා.හැ.අංකය (NIC) ඇතුලත් කරන්න.')),
+        const SnackBar(
+          content: Text('කරුණාකර ගෘහ මූලිකයාගේ ජා.හැ.අංකය (NIC) ඇතුලත් කරන්න.'),
+        ),
       );
       return;
     }
@@ -60,65 +107,68 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
     setState(() => _isSaving = true);
 
     try {
-      WriteBatch batch = FirebaseFirestore.instance.batch();
+      // 🔥 අපි citizen_details භාවිතා නොකර, existing 'survey_responses' එකටම Merge කරන්නෙමු
+      DocumentReference surveyRef = FirebaseFirestore.instance
+          .collection('survey_responses')
+          .doc(widget.surveyDocId);
 
-      // 1. Save Householder to 'citizen_details' (or change collection name as needed)
-      String docId = "${widget.houseNumber}_${_nicController.text.trim()}";
-      DocumentReference householderRef = FirebaseFirestore.instance
-          .collection('citizen_details') // Different collection
-          .doc(docId);
+      // Step 2 දත්ත සකස් කිරීම
+      Map<String, dynamic> step2Data = {
+        'householder': {
+          // දැනට පවතින දත්ත සමඟ මෙම අලුත් අයිතම පමණක් Merge කිරීමට
+          'dateOfBirth': _dobController.text.trim(),
+          'phone': _phoneController.text.trim(),
+          'email': _emailController.text.trim(),
+          'nationality': _selectedNationality,
+        },
+        'samurdhiStatus': _samurdhiStatus == 'Yes', // Boolean ලෙස Save වේ
+        'children': _childrenList.map((child) {
+          return {
+            'nic': child['nic'],
+            'name': child['name'],
+            'dob': child['dob'],
+            'gender': child['gender'],
+            'school': child['school'],
+            'attendsSchool': child['attendsSchool'] == 'true',
+            'specialNeeds': child['specialNeeds'] == 'true',
+            'assistance': child['assistance'] ?? 'None',
+          };
+        }).toList(),
+        'surveyStatus': 'step2_completed', // දත්ත වල තත්ත්වය Update කිරීම
+        'lastUpdated': FieldValue.serverTimestamp(),
+      };
 
-      batch.set(householderRef, {
-        'houseNumber': widget.houseNumber,
-        'nic': _nicController.text.trim(),
-        'fullName': _nameController.text.trim(),
-        'dob': _dobController.text.trim(),
-        'gender': _householderGender,
-        'phone': _phoneController.text.trim(),
-        'email': _emailController.text.trim(),
-        'nationality': _selectedNationality,
-        'isHouseholder': true,
-        'samurdhiStatus': _samurdhiStatus == 'Yes',
-        'timestamp': FieldValue.serverTimestamp(),
-      });
-
-      // 2. Save Children to the same collection
-      for (var child in _childrenList) {
-        // Use child NIC as primary key alongside house number
-        String childDocId = "${widget.houseNumber}_${child['nic']}";
-        DocumentReference childRef = FirebaseFirestore.instance
-            .collection('citizen_details')
-            .doc(childDocId);
-
-        batch.set(childRef, {
-          'houseNumber': widget.houseNumber,
-          'nic': child['nic'],
-          'fullName': child['name'],
-          'dob': child['dob'],
-          'gender': child['gender'],
-          'school': child['school'],
-          'attendsSchool': child['attendsSchool'],
-          'specialNeeds': child['specialNeeds'],
-          'isHouseholder': false,
-          'isChild': true,
-          'assistance': child['assistance'], // From the assistance dialog
-          'timestamp': FieldValue.serverTimestamp(),
-        });
-      }
-
-      await batch.commit();
+      // 🔥 Merge: SetOptions(merge: true) මගින් පැරණි දත්ත මකා නොදමා අලුත් දත්ත පමණක් එකතු කරයි
+      await surveyRef.set(step2Data, SetOptions(merge: true));
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('සියලුම දත්ත සාර්ථකව සුරකින ලදී!'), backgroundColor: Colors.green),
+          const SnackBar(
+            content: Text('සියලුම දත්ත සාර්ථකව සුරකින ලදී!'),
+            backgroundColor: Colors.green,
+          ),
         );
-        Navigator.pop(context); // Or navigate to the next actual page
+        
+        // 🔥 REDIRECT: Pop වෙනුවට නව HousingDetailsScreen එකට යොමු කිරීම
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HousingDetailsScreen(
+              surveyDocId: widget.surveyDocId,
+              houseNumber: widget.houseNumber,
+              householderNic: widget.householderNic,
+            ),
+          ),
+        );
       }
     } catch (e) {
       debugPrint('Error saving details: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('දත්ත සුරැකීමේ අදෝෂයක් සිදු විය.'), backgroundColor: Colors.red),
+          const SnackBar(
+            content: Text('දත්ත සුරැකීමේ අදෝෂයක් සිදු විය.'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     } finally {
@@ -129,7 +179,7 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1E1E1E), 
+      backgroundColor: const Color(0xFF1E1E1E),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -148,7 +198,10 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, color: Colors.lightBlue),
+                        icon: const Icon(
+                          Icons.arrow_back_ios,
+                          color: Colors.lightBlue,
+                        ),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const Expanded(
@@ -171,7 +224,10 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   _buildLabel('ගෘහ මූලික අංකය'),
                   Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 14,
+                      horizontal: 16,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey[200],
                       borderRadius: BorderRadius.circular(12),
@@ -179,40 +235,54 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                     child: Text(
                       widget.houseNumber,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 16, color: Colors.black54),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.black54,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  // --- Householder NIC ---
+                  // --- Householder NIC (Read Only) ---
                   _buildLabel('ගෘහ මූලිකයාගේ ජා.හැ.අංකය (NIC)'),
-                  _buildTextField(controller: _nicController),
+                  _buildTextField(controller: _nicController, readOnly: true),
 
-                  // --- Householder Gender ---
+                  // --- Householder Gender (Read Only) ---
                   _buildLabel('ගෘහ මූලිකත්වය'),
                   Row(
                     children: [
-                      _buildCheckbox('පිරිමි', _householderGender == 'Male', () {
-                        setState(() => _householderGender = 'Male');
-                      }),
-                      const SizedBox(width: 20),
-                      _buildCheckbox('කාන්තා', _householderGender == 'Female', () {
-                        setState(() => _householderGender = 'Female');
-                      }),
+                      // පළමු පිටුවේ සිට එන Gender එක පෙන්වීම
+                      Text(
+                        _householderGender == 'Male' ? 'පිරිමි' : 'කාන්තා',
+                        style: const TextStyle(
+                          fontFamily: 'UN-Imanee',
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      const Text(
+                        '(සංස්කරණය කළ නොහැක)',
+                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
 
                   // --- Text Fields ---
                   _buildLabel('ගෘහ මූලිකයාගේ නම'),
-                  _buildTextField(controller: _nameController),
-                  
+                  // පළමු පිටුවෙන් එන නම Read only ලෙස පෙන්වීම
+                  _buildTextField(controller: _nameController, readOnly: true),
+
                   _buildLabel('උපන්දිනය'),
-                  _buildTextField(controller: _dobController, hintText: 'mm/dd/yyyy'),
-                  
+                  _buildTextField(
+                    controller: _dobController,
+                    hintText: 'mm/dd/yyyy',
+                  ),
+
                   _buildLabel('දුරකථන අංකය'),
                   _buildTextField(controller: _phoneController),
-                  
+
                   _buildLabel('ඊ මේල්'),
                   _buildTextField(controller: _emailController),
 
@@ -233,7 +303,10 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                         items: _nationalities.map((String value) {
                           return DropdownMenuItem<String>(
                             value: value,
-                            child: Text(value, style: const TextStyle(fontFamily: 'UN-Imanee')),
+                            child: Text(
+                              value,
+                              style: const TextStyle(fontFamily: 'UN-Imanee'),
+                            ),
                           );
                         }).toList(),
                         onChanged: (newValue) {
@@ -248,37 +321,50 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
 
                   // --- Children Details Section ---
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       tilePadding: EdgeInsets.zero,
                       title: const Text(
                         'වයස අවුරුදු (18) ට අඩු දරුවන් පිළිබඳ විස්තර',
-                        style: TextStyle(fontFamily: 'UN-Imanee', fontSize: 14, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontFamily: 'UN-Imanee',
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       children: [
-                        // Show added children
                         if (_childrenList.isNotEmpty)
                           ...List.generate(_childrenList.length, (index) {
                             final child = _childrenList[index];
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 8.0),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
                                       '${index + 1}. ${child['name']} (${child['nic']})',
-                                      style: const TextStyle(fontFamily: 'UN-Imanee', fontSize: 15),
+                                      style: const TextStyle(
+                                        fontFamily: 'UN-Imanee',
+                                        fontSize: 15,
+                                      ),
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                      size: 20,
+                                    ),
                                     onPressed: () {
                                       setState(() {
                                         _childrenList.removeAt(index);
                                       });
                                     },
-                                  )
+                                  ),
                                 ],
                               ),
                             );
@@ -288,7 +374,10 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                             padding: EdgeInsets.only(bottom: 12.0),
                             child: Text(
                               'ළමුන් තවමත් එකතු කර නැත.',
-                              style: TextStyle(fontFamily: 'UN-Imanee', fontStyle: FontStyle.italic),
+                              style: TextStyle(
+                                fontFamily: 'UN-Imanee',
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
 
@@ -296,12 +385,17 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFFF4F33),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           onPressed: () => _showAddChildDialog(context),
                           child: const Text(
                             'දරුවෙක් එකතු කරන්න',
-                            style: TextStyle(fontFamily: 'UN-Imanee', color: Colors.white),
+                            style: TextStyle(
+                              fontFamily: 'UN-Imanee',
+                              color: Colors.white,
+                            ),
                           ),
                         ),
                       ],
@@ -332,13 +426,21 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFFF4F33),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                         onPressed: _isSaving ? null : _saveAllDetails,
                         child: _isSaving
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white))
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                ),
+                              )
                             : const Text(
-                                'සුරකින්න සහ ඊළඟට', // Save and Next
+                                'සුරකින්න සහ ඊළඟට',
                                 style: TextStyle(
                                   fontFamily: 'UN-Imanee',
                                   fontSize: 18,
@@ -374,18 +476,27 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, String? hintText}) {
+  // 🔥 readOnly කරන සඳහා `readOnly` පරාමිතියක් එකතු කරන ලදී
+  Widget _buildTextField({
+    required TextEditingController controller,
+    String? hintText,
+    bool readOnly = false,
+  }) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[200],
+        color: readOnly ? Colors.grey[300] : Colors.grey[200],
         borderRadius: BorderRadius.circular(12),
       ),
       child: TextField(
         controller: controller,
+        readOnly: readOnly,
         decoration: InputDecoration(
           hintText: hintText,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 14,
+          ),
         ),
       ),
     );
@@ -397,7 +508,10 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(fontFamily: 'UN-Imanee', fontSize: 14)),
+          Text(
+            label,
+            style: const TextStyle(fontFamily: 'UN-Imanee', fontSize: 14),
+          ),
           const SizedBox(width: 8),
           Container(
             width: 20,
@@ -407,8 +521,8 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
               color: isChecked ? Colors.black87 : Colors.white,
               borderRadius: BorderRadius.circular(4),
             ),
-            child: isChecked 
-                ? const Icon(Icons.check, size: 14, color: Colors.white) 
+            child: isChecked
+                ? const Icon(Icons.check, size: 14, color: Colors.white)
                 : null,
           ),
         ],
@@ -430,64 +544,96 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildLabel('NIC අංකය (අනිවාර්ය)'), // Required for PK
+                _buildLabel('NIC අංකය (අනිවාර්ය)'),
                 _buildTextField(controller: childNicCtrl),
 
                 _buildLabel('නම'),
                 _buildTextField(controller: childNameCtrl),
 
                 _buildLabel('උපන්දිනය'),
-                _buildTextField(controller: childDobCtrl, hintText: 'mm/dd/yyyy'),
-                
+                _buildTextField(
+                  controller: childDobCtrl,
+                  hintText: 'mm/dd/yyyy',
+                ),
+
                 _buildLabel('ස්ත්‍රී පුරුෂ භාවය'),
                 Row(
                   children: [
-                    _buildCheckbox('පිරිමි', childGender == 'පිරිමි', () => childGender = 'පිරිමි'),
+                    _buildCheckbox(
+                      'පිරිමි',
+                      childGender == 'පිරිමි',
+                      () => childGender = 'පිරිමි',
+                    ),
                     const SizedBox(width: 16),
-                    _buildCheckbox('ගැහැණු', childGender == 'ගැහැණු', () => childGender = 'ගැහැණු'),
+                    _buildCheckbox(
+                      'ගැහැණු',
+                      childGender == 'ගැහැණු',
+                      () => childGender = 'ගැහැණු',
+                    ),
                   ],
                 ),
-                
+
                 _buildLabel('පාසල්'),
                 Row(
                   children: [
-                    _buildCheckbox('යන', childAttendsSchool, () => childAttendsSchool = !childAttendsSchool),
+                    _buildCheckbox(
+                      'යන',
+                      childAttendsSchool,
+                      () => childAttendsSchool = !childAttendsSchool,
+                    ),
                     const SizedBox(width: 16),
-                    _buildCheckbox('නොයන', !childAttendsSchool, () => childAttendsSchool = !childAttendsSchool),
+                    _buildCheckbox(
+                      'නොයන',
+                      !childAttendsSchool,
+                      () => childAttendsSchool = !childAttendsSchool,
+                    ),
                   ],
                 ),
                 if (childAttendsSchool) ...[
-                   _buildLabel('පාසලේ නම'),
-                   _buildTextField(controller: childSchoolCtrl),
+                  _buildLabel('පාසලේ නම'),
+                  _buildTextField(controller: childSchoolCtrl),
                 ],
-                
+
                 _buildLabel('විශේෂ අවශ්‍යතා සහිත අයෙක්ද'),
                 Row(
                   children: [
-                    _buildCheckbox('ඔව්', childSpecialNeeds, () => childSpecialNeeds = !childSpecialNeeds),
+                    _buildCheckbox(
+                      'ඔව්',
+                      childSpecialNeeds,
+                      () => childSpecialNeeds = !childSpecialNeeds,
+                    ),
                     const SizedBox(width: 16),
-                    _buildCheckbox('නැත', !childSpecialNeeds, () => childSpecialNeeds = !childSpecialNeeds),
+                    _buildCheckbox(
+                      'නැත',
+                      !childSpecialNeeds,
+                      () => childSpecialNeeds = !childSpecialNeeds,
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
-                
+
                 Center(
                   child: SizedBox(
                     width: 120,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.lightBlue,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: () {
-                        if (childNameCtrl.text.isNotEmpty && childNicCtrl.text.isNotEmpty) {
+                        if (childNameCtrl.text.isNotEmpty &&
+                            childNicCtrl.text.isNotEmpty) {
                           setState(() {
                             _childrenList.add({
                               'nic': childNicCtrl.text.trim(),
@@ -497,22 +643,29 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                               'school': childSchoolCtrl.text.trim(),
                               'attendsSchool': childAttendsSchool.toString(),
                               'specialNeeds': childSpecialNeeds.toString(),
-                              'assistance': 'None', // Default if not filled in 2nd popup
+                              'assistance': 'None',
                             });
                           });
                           Navigator.pop(context);
-                          // Optional: Open Assistance Dialog immediately
-                          // _showAssistanceDialog(context);
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('නම සහ NIC අංකය අවශ්‍ය වේ!')),
+                            const SnackBar(
+                              content: Text('නම සහ NIC අංකය අවශ්‍ය වේ!'),
+                            ),
                           );
                         }
                       },
-                      child: const Text('හරි', style: TextStyle(fontFamily: 'UN-Imanee', color: Colors.white, fontSize: 18)),
+                      child: const Text(
+                        'හරි',
+                        style: TextStyle(
+                          fontFamily: 'UN-Imanee',
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
+                      ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           ),

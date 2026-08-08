@@ -76,10 +76,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         elevation: 2,
         titleSpacing: 0,
         title: Row(
-          children: [
-            const SizedBox(width: 12),
+          children: const [
+            SizedBox(width: 12),
             Icon(Icons.account_balance, color: accentGold, size: 28),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Text(
               'LankaLink Dashboard',
               style: TextStyle(
@@ -188,7 +188,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           decoration: BoxDecoration(
                             gradient: _selectedCardIndex != null
                                 ? const LinearGradient(
-                                    colors: [confirmColor, Color(0xFF2A5298)],
+                                    colors: [confirmColor, Color(0xFFC2185B)],
                                     begin: Alignment.centerLeft,
                                     end: Alignment.centerRight,
                                   )
@@ -206,15 +206,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ]
                                 : [],
                           ),
-                          child: Center(
-
-
-                            
+                          child: const Center(
                             child: Text(
                               'පටන් ගන්න',
                               style: TextStyle(
-fontFamily: 'UN-Sandhyanee',                                fontSize: 22,
-                                color: const Color.fromARGB(255, 244, 234, 234),
+                                fontFamily: 'UN-Sandhyanee',
+                                fontSize: 22,
+                                color: Color.fromARGB(255, 244, 234, 234),
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 0.8,
                               ),
@@ -232,7 +230,6 @@ fontFamily: 'UN-Sandhyanee',                                fontSize: 22,
       ),
     );
   }
-
 
   Widget _buildGovSelectableCard({
     required int index,
@@ -326,5 +323,5 @@ fontFamily: 'UN-Sandhyanee',                                fontSize: 22,
         ),
       ),
     );
-  } 
+  }
 }
