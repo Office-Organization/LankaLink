@@ -1,32 +1,38 @@
-import 'package:flutter/foundation.dart';
-import '../../core/app_strings.dart';
-import '../../core/app_exception.dart';
+import 'package:flutter/material.dart';
 import '../../data/auth_repository.dart';
+import '../../core/app_exception.dart';
 
 class LoginViewModel extends ChangeNotifier {
-  LoginViewModel(this._auth);
-  final AuthRepository _auth;
+  final AuthRepository _authRepository;
 
-  bool isLoading = false;
-  String? error;
+  bool _isLoading = false;
+  String? _error;
+
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+
+  LoginViewModel(this._authRepository);
 
   Future<void> login(String nic, String password) async {
-    if (nic.isEmpty || password.isEmpty) {
-      error = AppStrings.errEmptyFields;
+    if (nic.trim().isEmpty || password.trim().isEmpty) {
+      _error = 'කරුණාකර ජා.හැ.අංකය සහ මුරපදය ඇතුළත් කරන්න.';
       notifyListeners();
       return;
     }
 
-    isLoading = true;
-    error = null;
-    notifyListeners();
-
     try {
-      await _auth.signInWithNic(nic, password);
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+
+      await _authRepository.signInWithNic(nic, password);
+
     } on AppException catch (e) {
-      error = e.message;
+      _error = e.message;
+    } catch (e) {
+      _error = 'ලොගින් වීමට නොහැකි විය: $e';
     } finally {
-      isLoading = false;
+      _isLoading = false;
       notifyListeners();
     }
   }

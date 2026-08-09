@@ -5,6 +5,11 @@ import '../../core/app_theme.dart';
 import '../../widgets/app_button.dart';
 import 'dashboard_view_model.dart';
 
+class Routes {
+  static const survey = '/survey';
+  static const gnDetails = '/gnDetails';
+}
+
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
@@ -20,7 +25,7 @@ class DashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white70),
             onPressed: () async {
-              await context.read<AuthRepository>().signOut();
+              await context.read().signOut();
             },
           ),
         ],

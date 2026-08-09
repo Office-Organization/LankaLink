@@ -1,14 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:lankalink/widgets/status_views.dart';
 import 'package:provider/provider.dart';
+
+// TODO: Adjust these paths to match where these files actually live in your project
+import 'login_view_model.dart';
 import '../../core/app_strings.dart';
 import '../../widgets/app_screen.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/app_button.dart';
-import '../../widgets/status_views.dart';
-import 'login_view_model.dart';
+
+class AppColors {
+  AppColors._();
+
+  static const Color primary = Color(0xFF0D47A1);
+  static const Color secondary = Color(0xFF1976D2);
+  static const Color background = Color(0xFFF5F5F5);
+  static const Color text = Color(0xFF212121);
+  static const Color error = Color(0xFFD32F2F);
+}
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({Key? key}) : super(key: key);
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -56,8 +68,10 @@ class _LoginScreenState extends State<LoginScreen> {
             child: AppButton(
               label: 'ඇතුල් වන්න',
               isLoading: vm.isLoading,
-              onPressed: () => context.read<LoginViewModel>()
-                  .login(_nicCtrl.text.trim(), _passCtrl.text.trim()),
+              onPressed: () => context.read<LoginViewModel>().login(
+                _nicCtrl.text.trim(),
+                _passCtrl.text.trim(),
+              ),
             ),
           ),
           if (vm.error != null) ...[
@@ -71,9 +85,13 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text("Don't have an account? "),
               GestureDetector(
                 onTap: () => Navigator.pushNamed(context, '/signup'),
-                child: const Text(
+                // FIX: Removed 'const' from the Text widget to resolve the compiler error
+                child: Text(
                   'Sign Up',
-                  style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],

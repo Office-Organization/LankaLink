@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
-import 'login_screen.dart';
-import 'signup_screen.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -84,6 +82,7 @@ class WelcomeScreen extends StatelessWidget {
                   height: 50,
                   child: ElevatedButton(
                     onPressed: () {
+                      // Adjust to Routes.login if you are using your constants file
                       Navigator.pushNamed(context, '/login');
                     },
                     style: ElevatedButton.styleFrom(
@@ -101,6 +100,7 @@ class WelcomeScreen extends StatelessWidget {
                   height: 50,
                   child: OutlinedButton(
                     onPressed: () {
+                      // Adjust to Routes.signup if you are using your constants file
                       Navigator.pushNamed(context, '/signup');
                     },
                     style: OutlinedButton.styleFrom(

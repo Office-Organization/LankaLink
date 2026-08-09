@@ -53,7 +53,7 @@ class AppUser {
 
   Map<String, dynamic> toMap() {
     return {
-      Fields.uid: uid,
+      'uid': uid,
       Fields.fullName: fullName,
       Fields.nic: nic,
       Fields.email: email,

@@ -67,7 +67,6 @@ class _FamilyStepState extends State<FamilyStep> {
           AppTextField(
             controller: _membersCtrl,
             label: 'පවුල් සාමාජිකයන් (කොමාවෙන් වෙන් කරන්න)',
-            maxLines: 3,
             onChanged: (val) {
               final members = val.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
               vm.updateFamilyMembers(members);
