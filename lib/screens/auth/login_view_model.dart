@@ -1,39 +1,34 @@
 import 'package:flutter/material.dart';
-import '../../data/auth_repository.dart';
+import '../../core/app_strings.dart';
 import '../../core/app_exception.dart';
+import '../../data/auth_repository.dart';
 
 class LoginViewModel extends ChangeNotifier {
-  final AuthRepository _authRepository;
+  LoginViewModel(this._auth);
+  final AuthRepository _auth;
 
-  bool _isLoading = false;
-  String? _error;
-
-  bool get isLoading => _isLoading;
-  String? get error => _error;
-
-  LoginViewModel(this._authRepository);
+  bool isLoading = false;
+  String? error;
 
   Future<void> login(String nic, String password) async {
-    if (nic.trim().isEmpty || password.trim().isEmpty) {
-      _error = 'කරුණාකර ජා.හැ.අංකය සහ මුරපදය ඇතුළත් කරන්න.';
+    if (nic.isEmpty || password.isEmpty) {
+      error = AppStrings.errEmptyFields;
       notifyListeners();
       return;
     }
 
+    isLoading = true;
+    error = null;
+    notifyListeners(); // Loading පෙන්වීම ආරම්භ කරයි
+
     try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _authRepository.signInWithNic(nic, password);
-
+      await _auth.signInWithNic(nic, password);
+      // මෙහි Navigation කේත නොමැත, AuthGate මගින් එය ස්වයංක්‍රීයව සිදු කරයි
     } on AppException catch (e) {
-      _error = e.message;
-    } catch (e) {
-      _error = 'ලොගින් වීමට නොහැකි විය: $e';
+      error = e.message;
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      isLoading = false;
+      notifyListeners(); // Loading අවසන් කරයි
     }
   }
 }

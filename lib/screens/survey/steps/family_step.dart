@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../core/app_strings.dart';
+import '../survey_view_model.dart';
 import '../../../models/survey.dart';
-import '../../../widgets/app_text_field.dart';
-import '../../survey/survey_view_model.dart';
 
 class FamilyStep extends StatefulWidget {
   const FamilyStep({super.key});
@@ -13,24 +11,18 @@ class FamilyStep extends StatefulWidget {
 }
 
 class _FamilyStepState extends State<FamilyStep> {
-  final TextEditingController _searchCtrl = TextEditingController();
-  final TextEditingController _membersCtrl = TextEditingController();
+  late final SurveyViewModel _vm;
+  final _houseNumberCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final vm = context.read<SurveyViewModel>();
-      if (vm.survey != null) {
-        _membersCtrl.text = vm.survey!.familyMembersNames.join(', ');
-      }
-    });
+    _vm = context.read<SurveyViewModel>();
   }
 
   @override
   void dispose() {
-    _searchCtrl.dispose();
-    _membersCtrl.dispose();
+    _houseNumberCtrl.dispose();
     super.dispose();
   }
 
@@ -38,45 +30,103 @@ class _FamilyStepState extends State<FamilyStep> {
   Widget build(BuildContext context) {
     final vm = context.watch<SurveyViewModel>();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return ListView(
+      padding: const EdgeInsets.all(24),
       children: [
+        // ගෘහ මූලික අංකය ඇතුළත් කිරීම (Enter එබූ විට සොයයි)
         Row(
           children: [
+            const Text('ගෘහ මූලික අංකය', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(width: 16),
             Expanded(
-              child: AppTextField(
-                controller: _searchCtrl,
-                label: 'ගෘහ අංකය (සොයන්න)',
+              child: TextField(
+                controller: _houseNumberCtrl,
+                textAlign: TextAlign.center,
+                decoration: InputDecoration(
+                  hintText: 'අංකය ටයිප් කර Enter ඔබන්න',
+                  hintStyle: const TextStyle(fontSize: 12),
+                  filled: true,
+                  fillColor: Colors.grey.shade300,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+                onSubmitted: (value) => vm.searchHouse(value), // ස්වයංක්‍රීය දත්ත ලබාගැනීම
               ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: () {
-                vm.loadOrCreate(_searchCtrl.text.trim());
-              },
-              child: const Text('සොයන්න'),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        if (vm.survey != null) ...[
-          Text('ගෘහ මූලික අංකය: ${vm.survey!.houseNumber}'),
-          const SizedBox(height: 8),
-          Text('ගෘහ මූලිකයා: ${vm.survey!.householderName}'),
-          const SizedBox(height: 16),
-          AppTextField(
-            controller: _membersCtrl,
-            label: 'පවුල් සාමාජිකයන් (කොමාවෙන් වෙන් කරන්න)',
-            onChanged: (val) {
-              final members = val.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-              vm.updateFamilyMembers(members);
-            },
+        const SizedBox(height: 24),
+
+        // දත්ත සොයමින් පවතින විට Loading පෙන්වීම
+        if (vm.isBusy)
+          const Center(child: CircularProgressIndicator()),
+
+        // සාමාජිකයින්ගේ ලැයිස්තුව (Card 1)
+        if (!vm.isBusy && vm.familyMembers.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('පවුල් සාමාජිකයන්', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                ...vm.familyMembers.asMap().entries.map((entry) {
+                  int idx = entry.key + 1;
+                  var member = entry.value;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Row(
+                      children: [
+                        Expanded(child: Text('($idx.) ${member.name}')),
+                        Icon(Icons.face, color: Colors.orange.shade800), // අයිකනය
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
           ),
-        ],
-        if (vm.error != null) ...[
-          const SizedBox(height: 16),
-          Text(vm.error!, style: const TextStyle(color: Colors.red)),
-        ],
+          
+        const SizedBox(height: 16),
+        
+        // අස්වැසුම තොරතුරු පෝරමය (Card 2) - අලුත් දත්ත එකතු කිරීම සඳහා
+        if (!vm.isBusy && vm.familyMembers.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('අස්වැසුම', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text('ඇත', style: TextStyle(color: Colors.white, fontSize: 12)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Text('විශේෂ අවශ්‍යතා සහිත සාමාජිකයන් ගණන:', style: TextStyle(fontSize: 12)),
+                // මෙම ස්ථානයට අමතර දත්ත ඇතුළත් කිරීමේ Fields ඉදිරියේදී එක් කළ හැක
+              ],
+            ),
+          ),
       ],
     );
   }
