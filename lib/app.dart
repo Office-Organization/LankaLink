@@ -26,7 +26,7 @@ class LankaLinkApp extends StatelessWidget {
           Routes.family: (_) => ChangeNotifierProvider(
             create: (c) => SurveyViewModel(
               c.read<SurveyRepository>(),
-              c.read<VoterRepository>(), // අලුතින් එක් කරන ලදී
+              c.read<VoterRepository>(), // දෝෂය නිවැරදි කර ඇත (නමක් භාවිතා නොකර කෙලින්ම ලබා දෙයි)
             ),
             child: const SurveyScreen(),
           ),

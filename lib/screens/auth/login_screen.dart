@@ -15,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _nicController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  
+
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -25,7 +25,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (nic.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('කරුණාකර NIC අංකය සහ මුරපදය ඇතුළත් කරන්න.')),
+        const SnackBar(
+          content: Text('කරුණාකර NIC අංකය සහ මුරපදය ඇතුළත් කරන්න.'),
+        ),
       );
       return;
     }
@@ -44,7 +46,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (userQuery.docs.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('මෙම ජාතික හැඳුනුම්පත් අංකය ලියාපදිංචි කර නොමැත.')),
+            const SnackBar(
+              content: Text('මෙම ජාතික හැඳුනුම්පත් අංකය ලියාපදිංචි කර නොමැත.'),
+            ),
           );
         }
         setState(() {
@@ -61,24 +65,27 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ඔබ සාර්ථකව ලොග් විය!')),
-        );
-        
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('ඔබ සාර්ථකව ලොග් විය!')));
+
         // සාර්ථකව ලොග් වූ පසු Dashboard එක වෙත Redirect කිරීම
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const DashboardScreen()),
         );
       }
-
     } on FirebaseAuthException catch (e) {
       String errorMessage = 'දෝෂයක් මතු විය.';
-      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential') {
         errorMessage = 'ඔබ ඇතුළත් කළ මුරපදය වැරදියි.';
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (e) {
       if (mounted) {
@@ -127,7 +134,10 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 60),
               Text(
                 'Enter Your NIC',
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500),
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -137,18 +147,27 @@ class _LoginScreenState extends State<LoginScreen> {
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   filled: true,
                   fillColor: Colors.grey.shade100,
-                  suffixIcon: Icon(Icons.badge_outlined, color: Colors.blue.shade300),
+                  suffixIcon: Icon(
+                    Icons.badge_outlined,
+                    color: Colors.blue.shade300,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
               Text(
                 'Enter Your Password',
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w500),
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -161,7 +180,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   fillColor: Colors.grey.shade100,
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      _obscurePassword
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: Colors.blue.shade300,
                     ),
                     onPressed: () {
@@ -174,7 +195,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
                 ),
               ),
               const SizedBox(height: 12),
@@ -203,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Colors.blue.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -244,13 +268,18 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   Text(
                     'Don\'t have an account? ',
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
                   ),
                   GestureDetector(
                     onTap: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const SignupScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const SignupScreen(),
+                        ),
                       );
                     },
                     child: Text(

@@ -17,7 +17,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final TextEditingController _confirmPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -33,7 +34,11 @@ class _SignupScreenState extends State<SignupScreen> {
     String confirmPassword = _confirmPasswordController.text.trim();
 
     // 1. දත්ත සියල්ල පුරවා ඇත්දැයි පරීක්ෂා කිරීම
-    if (name.isEmpty || nic.isEmpty || email.isEmpty || phone.isEmpty || password.isEmpty) {
+    if (name.isEmpty ||
+        nic.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('කරුණාකර සියලුම තොරතුරු ඇතුළත් කරන්න.')),
       );
@@ -54,25 +59,28 @@ class _SignupScreenState extends State<SignupScreen> {
 
     try {
       // 3. Firebase Authentication හරහා ගිණුම සෑදීම
-      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // 4. Firestore Database එකට අමතර දත්ත (නම, NIC, Phone) සේව් කිරීම
-      await FirebaseFirestore.instance.collection('users').doc(userCredential.user!.uid).set({
-        'uid': userCredential.user!.uid,
-        'name': name,
-        'nic': nic,
-        'email': email,
-        'phone': phone,
-        'createdAt': DateTime.now(),
-      });
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+            'uid': userCredential.user!.uid,
+            'name': name,
+            'nic': nic,
+            'email': email,
+            'phone': phone,
+            'createdAt': DateTime.now(),
+          });
 
       // 5. සාර්ථක වූ පසු පණිවිඩයක් පෙන්වා Login තිරයට යාම
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ලියාපදිංචිය සාර්ථකයි! දැන් Login වන්න.')),
+          const SnackBar(
+            content: Text('ලියාපදිංචිය සාර්ථකයි! දැන් Login වන්න.'),
+          ),
         );
         Navigator.pop(context);
       }
@@ -88,13 +96,15 @@ class _SignupScreenState extends State<SignupScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(errorMessage)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString())),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.toString())));
       }
     } finally {
       if (mounted) {
@@ -106,18 +116,31 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   // නැවත නැවත භාවිත කළ හැකි (Reusable) Text Field එකක් සෑදීම
-  Widget _buildTextField(String label, String hint, IconData icon, TextEditingController controller, {bool isPassword = false, bool isConfirmPassword = false}) {
+  Widget _buildTextField(
+    String label,
+    String hint,
+    IconData icon,
+    TextEditingController controller, {
+    bool isPassword = false,
+    bool isConfirmPassword = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.black87),
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.black87,
+          ),
         ),
         const SizedBox(height: 6),
         TextField(
           controller: controller,
-          obscureText: isPassword ? _obscurePassword : (isConfirmPassword ? _obscureConfirmPassword : false),
+          obscureText: isPassword
+              ? _obscurePassword
+              : (isConfirmPassword ? _obscureConfirmPassword : false),
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
@@ -126,7 +149,9 @@ class _SignupScreenState extends State<SignupScreen> {
             suffixIcon: isPassword || isConfirmPassword
                 ? IconButton(
                     icon: Icon(
-                      (isPassword ? _obscurePassword : _obscureConfirmPassword) ? Icons.visibility_off : Icons.visibility,
+                      (isPassword ? _obscurePassword : _obscureConfirmPassword)
+                          ? Icons.visibility_off
+                          : Icons.visibility,
                       color: Colors.lightBlue,
                     ),
                     onPressed: () {
@@ -144,7 +169,10 @@ class _SignupScreenState extends State<SignupScreen> {
               borderRadius: BorderRadius.circular(30),
               borderSide: BorderSide.none,
             ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 14,
+            ),
           ),
         ),
         const SizedBox(height: 16),
@@ -172,16 +200,52 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               Text(
                 'Signup',
-                style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black54),
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black54,
+                ),
               ),
               const SizedBox(height: 24),
-              
-              _buildTextField('Name', 'Enter Your Name', Icons.person_outline, _nameController),
-              _buildTextField('NIC Number', 'Enter Your NIC', Icons.badge_outlined, _nicController),
-              _buildTextField('Email', 'Enter Your Email Adress', Icons.email_outlined, _emailController),
-              _buildTextField('Phone Number', 'Enter Your Phone Number', Icons.phone_in_talk_outlined, _phoneController),
-              _buildTextField('Password', '**************', Icons.lock_outline, _passwordController, isPassword: true),
-              _buildTextField('Enter Password Again', '**************', Icons.lock_outline, _confirmPasswordController, isConfirmPassword: true),
+
+              _buildTextField(
+                'Name',
+                'Enter Your Name',
+                Icons.person_outline,
+                _nameController,
+              ),
+              _buildTextField(
+                'NIC Number',
+                'Enter Your NIC',
+                Icons.badge_outlined,
+                _nicController,
+              ),
+              _buildTextField(
+                'Email',
+                'Enter Your Email Adress',
+                Icons.email_outlined,
+                _emailController,
+              ),
+              _buildTextField(
+                'Phone Number',
+                'Enter Your Phone Number',
+                Icons.phone_in_talk_outlined,
+                _phoneController,
+              ),
+              _buildTextField(
+                'Password',
+                '**************',
+                Icons.lock_outline,
+                _passwordController,
+                isPassword: true,
+              ),
+              _buildTextField(
+                'Enter Password Again',
+                '**************',
+                Icons.lock_outline,
+                _confirmPasswordController,
+                isConfirmPassword: true,
+              ),
 
               const SizedBox(height: 24),
 
@@ -197,21 +261,24 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.blue.withOpacity(0.3),
+                      color: Colors.blue.withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _signUpUser, // Loading වන විට Button එක ඔබන්න බැරි කිරීම
+                  onPressed: _isLoading
+                      ? null
+                      : _signUpUser, // Loading වන විට Button එක ඔබන්න බැරි කිරීම
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    disabledBackgroundColor: Colors.grey.shade400, // Disable වූ විට වර්ණය
+                    disabledBackgroundColor:
+                        Colors.grey.shade400, // Disable වූ විට වර්ණය
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -232,15 +299,18 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                 ),
               ),
-              
+
               const SizedBox(height: 20),
-              
+
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
                     'Already Registered ? ',
-                    style: GoogleFonts.poppins(fontSize: 12, color: Colors.black87),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
                   ),
                   GestureDetector(
                     onTap: () {

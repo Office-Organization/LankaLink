@@ -34,7 +34,7 @@ class DashboardScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(flex: 1),
-              
+
               const Text(
                 'ආයුබෝවන්',
                 textAlign: TextAlign.center,
@@ -44,9 +44,9 @@ class DashboardScreen extends StatelessWidget {
                   color: Colors.black87,
                 ),
               ),
-              
+
               const Spacer(flex: 1),
-              
+
               _MenuButton(
                 label: 'පවුල් තොරතුරු',
                 onPressed: () {
@@ -54,9 +54,9 @@ class DashboardScreen extends StatelessWidget {
                   Navigator.pushNamed(context, Routes.family);
                 },
               ),
-              
+
               const SizedBox(height: 24),
-              
+
               _MenuButton(
                 label: 'ග්‍රාම නිලධාරී වසමට\nඅදාල තොරතුරු',
                 onPressed: () {
@@ -64,16 +64,16 @@ class DashboardScreen extends StatelessWidget {
                   Navigator.pushNamed(context, Routes.gn);
                 },
               ),
-              
+
               const Spacer(flex: 1),
-              
+
               AppButton(
                 label: 'පටන් ගන්න',
                 onPressed: () {
                   // පටන් ගැනීමේ ක්‍රියාවලිය
                 },
               ),
-              
+
               const Spacer(flex: 2),
             ],
           ),
@@ -84,10 +84,7 @@ class DashboardScreen extends StatelessWidget {
 }
 
 class _MenuButton extends StatelessWidget {
-  const _MenuButton({
-    required this.label,
-    required this.onPressed,
-  });
+  const _MenuButton({required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
@@ -101,7 +98,7 @@ class _MenuButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 6,
             offset: const Offset(0, 3),
           ),

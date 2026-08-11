@@ -31,8 +31,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthRepository(auth, db)),
         // SurveyRepository එක මුළු App එකටම ලබා දීම
         Provider(create: (_) => SurveyRepository(db)),
-                Provider(create: (_) => VoterRepository(db)),
-
+        Provider(create: (_) => VoterRepository(db)),
       ],
       child: const LankaLinkApp(),
     ),

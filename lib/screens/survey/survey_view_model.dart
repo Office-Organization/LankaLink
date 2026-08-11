@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../data/survey_repository.dart';
 import '../../data/voter_repository.dart';
 import '../../models/survey.dart';
-import '../../models/voter.dart';
 
 class SurveyViewModel extends ChangeNotifier {
   SurveyViewModel(this._surveys, this._voters);
@@ -10,61 +9,102 @@ class SurveyViewModel extends ChangeNotifier {
   final VoterRepository _voters;
 
   Survey survey = const Survey(); 
-  List<AppVoter> familyMembers = []; // සොයාගත් පවුලේ සාමාජිකයන්
-  
   bool isBusy = false;
   String? error;
 
-  // ගෘහ මූලික අංකය සෙවීම
   Future<void> searchHouse(String houseNumber) async {
-    if (houseNumber.isEmpty) return;
+    final query = houseNumber.trim();
+    if (query.isEmpty) return;
 
     isBusy = true; 
     error = null; 
-    familyMembers = [];
     notifyListeners();
 
     try {
-      final members = await _voters.findByHouse(houseNumber);
-      if (members.isEmpty) {
-        error = 'මෙම ගෘහ මූලික අංකයට අදාළ දත්ත හමු නොවීය.';
+      final existingSurvey = await _surveys.getSurveyByHouseNumber(query);
+      
+      if (existingSurvey != null) {
+        survey = existingSurvey;
       } else {
-        familyMembers = members;
-        // ස්වයංක්‍රීයව පවුලේ ප්‍රධානියා සහ සාමාජික ගණන පෝරමයට යෙදීම
-        updateFamily(FamilyInfo(
-          headName: members.first.name,
-          memberCount: members.length,
-        ));
+        final voters = await _voters.findByHouse(query);
+        
+        if (voters.isEmpty) {
+          error = 'මෙම ගෘහ අංකයට අදාළ දත්ත හමු නොවීය.';
+          survey = survey.copyWith(houseNumber: query);
+        } else {
+          final members = voters.map((v) => FamilyMember(
+            name: v.name,
+            nic: v.nic,
+            gender: v.gender == 'F' ? 'ස්ත්‍රී' : 'පුරුෂ', 
+            birthday: DateTime(1990, 1, 1), 
+          )).toList();
+
+          survey = Survey(
+            houseNumber: query,
+            family: FamilyInfo(members: members),
+          );
+        }
       }
     } catch (e) {
-      error = 'දත්ත ලබාගැනීමේදී දෝෂයක් මතු විය.';
+      error = 'දත්ත සෙවීමේදී දෝෂයක් මතු විය: $e';
     } finally {
       isBusy = false; 
       notifyListeners();
     }
   }
 
-  void updateFamily(FamilyInfo f) {
-    survey = survey.copyWith(family: f);
-    // මෙහි notifyListeners යොදන්නේ නැත (guide එකට අනුව)
+  void toggleAswasuma(bool value) {
+    survey = survey.copyWith(family: survey.family.copyWith(hasAswasuma: value));
+    notifyListeners();
+  }
+
+  void updateSpecialNeeds(int count, double amount, String description) {
+    survey = survey.copyWith(
+      family: survey.family.copyWith(
+        specialNeedsCount: count,
+        specialNeedsAmount: amount,
+        specialNeedDescription: description,
+      ),
+    );
+  }
+
+  void addMember(FamilyMember member) {
+    final updatedList = List<FamilyMember>.from(survey.family.members)..add(member);
+    survey = survey.copyWith(family: survey.family.copyWith(members: updatedList));
+    notifyListeners();
+  }
+
+  void updateMember(FamilyMember updatedMember) {
+    final updatedList = survey.family.members.map((m) {
+      return m.id == updatedMember.id ? updatedMember : m;
+    }).toList();
+    survey = survey.copyWith(family: survey.family.copyWith(members: updatedList));
+    notifyListeners();
+  }
+
+  void removeMember(String id) {
+    final updatedList = survey.family.members.where((m) => m.id != id).toList();
+    survey = survey.copyWith(family: survey.family.copyWith(members: updatedList));
+    notifyListeners();
   }
 
   Future<bool> save() async {
-    // ... (පැරණි save ක්‍රියාවලිය එලෙසම පවතී)
-    if (survey.family.headName.isEmpty || survey.family.memberCount <= 0) {
-      error = 'කරුණාකර සියලුම තොරතුරු නිවැරදිව පුරවන්න.';
+    if (survey.houseNumber.isEmpty || survey.family.members.isEmpty) {
+      error = 'කරුණාකර ගෘහ අංකය සහ සාමාජිකයන් ඇතුළත් කරන්න.';
       notifyListeners();
       return false;
     }
+
     isBusy = true; error = null; notifyListeners();
+
     try {
-      await _surveys.save(survey);
+      await _surveys.saveFamilyDetails(survey.houseNumber, survey.family);
       return true;
     } catch (e) {
-      error = 'දත්ත සුරැකීමේදී දෝෂයක් මතු විය.';
+      error = 'දෝෂය: ${e.toString()}';
       return false;
     } finally {
-      isBusy = false; notifyListeners();
+      isBusy = false; notifyListeners(); 
     }
   }
 }
