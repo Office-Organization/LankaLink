@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '/../core/app_theme.dart';
+import '../../../core/app_theme.dart';
 import '../survey_view_model.dart';
 import '../../../models/survey.dart';
 import '../add_member_dialog.dart';

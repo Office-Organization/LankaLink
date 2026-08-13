@@ -1,0 +1,325 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../core/app_theme.dart';
+import 'income_view_model.dart';
+
+class IncomeScreen extends StatelessWidget {
+  const IncomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final vm = context.watch<IncomeViewModel>();
+    final details = vm.details;
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.lightBlue),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'ආදායම් මාර්ග',
+          style: TextStyle(
+            fontFamily: 'UNSamantha',
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: vm.isBusy
+          ? const Center(
+              child: CircularProgressIndicator(color: Colors.lightBlue),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (vm.error != null)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      color: Colors.red.shade100,
+                      width: double.infinity,
+                      child: Text(
+                        vm.error!,
+                        style: const TextStyle(
+                          color: Colors.red,
+                          fontFamily: 'UNGanganee',
+                        ),
+                      ),
+                    ),
+
+                  _buildLabel('ප්‍රධාන ආදායම් මාර්ග'),
+                  _buildDropdown(
+                    value: details.mainIncome,
+                    items: ['ඇත', 'නැත'],
+                    onChanged: (val) => vm.updateField(mainIncome: val),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildLabel('අමතර ආදායම් මාර්ග'),
+                  _buildDropdown(
+                    value: details.extraIncome,
+                    items: ['ඇත', 'නැත'],
+                    onChanged: (val) => vm.updateField(extraIncome: val),
+                  ),
+                  const SizedBox(height: 16),
+
+                  _buildLabel('රැකියාව'),
+                  _buildDropdown(
+                    value: details.jobType,
+                    items: [
+                      'රජයේ',
+                      'පුද්ගලික අංශයේ',
+                      'අර්ධ රාජ්‍ය',
+                      'විදෙස්',
+                      'නැත',
+                    ],
+                    onChanged: (val) => vm.updateField(jobType: val),
+                  ),
+
+                  // 🔥 Logic: රැකියාවක් ඇත්නම් පමණක් තනතුර සහ ආයතනය පෙන්වන්න
+                  if (details.jobType != 'නැත') ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'තනතුර',
+                            style: TextStyle(
+                              fontFamily: 'UNSamantha',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            initialValue: details.jobPosition,
+                            onChanged: (val) =>
+                                vm.updateField(jobPosition: val),
+                            decoration: _inputStyle(),
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'ආයතනය',
+                            style: TextStyle(
+                              fontFamily: 'UNSamantha',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          TextFormField(
+                            initialValue: details.jobInstitute,
+                            onChanged: (val) =>
+                                vm.updateField(jobInstitute: val),
+                            decoration: _inputStyle(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  _buildLabel('සංචාරක'),
+                  _buildDropdown(
+                    value: details.tourismType,
+                    items: ['සේවා සැපයීම', 'පහසුකම් සැපයීම', 'වෙනත්', 'නැත'],
+                    onChanged: (val) => vm.updateField(tourismType: val),
+                  ),
+                  // 🔥 Logic: වෙනත් නම් විස්තරය අසන්න
+                  if (details.tourismType == 'වෙනත්') ...[
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      initialValue: details.tourismOther,
+                      onChanged: (val) => vm.updateField(tourismOther: val),
+                      decoration: _inputStyle(hint: 'විස්තරය ඇතුළත් කරන්න'),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  _buildLabel('කෘෂිකාර්මික'),
+                  _buildDropdown(
+                    value: details.agricultureType,
+                    items: ['තේ', 'වී', 'රබර්', 'පොල්', 'වෙනත්', 'නැත'],
+                    onChanged: (val) => vm.updateField(agricultureType: val),
+                  ),
+                  if (details.agricultureType == 'වෙනත්') ...[
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      initialValue: details.agricultureOther,
+                      onChanged: (val) => vm.updateField(agricultureOther: val),
+                      decoration: _inputStyle(hint: 'විස්තරය ඇතුළත් කරන්න'),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  _buildLabel('සත්ත්ව කර්මාන්තය'),
+                  _buildDropdown(
+                    value: details.animalHusbandryType,
+                    items: [
+                      'ඌරන්',
+                      'කුකුළන්',
+                      'හරකුන්',
+                      'එළුවන්',
+                      'වෙනත්',
+                      'නැත',
+                    ],
+                    onChanged: (val) =>
+                        vm.updateField(animalHusbandryType: val),
+                  ),
+                  if (details.animalHusbandryType == 'වෙනත්') ...[
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      initialValue: details.animalHusbandryOther,
+                      onChanged: (val) =>
+                          vm.updateField(animalHusbandryOther: val),
+                      decoration: _inputStyle(hint: 'කුමන සතුන්ද?'),
+                    ),
+                  ],
+                  // 🔥 Logic: නැත හැර වෙනත් එකක් තේරුවහොත් සතුන් ගණන අසන්න
+                  if (details.animalHusbandryType != 'නැත') ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      'සතුන් ගණන',
+                      style: TextStyle(
+                        fontFamily: 'UNSamantha',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextFormField(
+                      initialValue: details.animalCount,
+                      onChanged: (val) => vm.updateField(animalCount: val),
+                      keyboardType: TextInputType.number,
+                      decoration: _inputStyle(),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+
+                  _buildLabel('ධීවර කර්මාන්තය'),
+                  _buildDropdown(
+                    value: details.fishingType,
+                    items: ['කරදිය', 'මිරිදිය', 'සුරතල් මසුන්', 'නැත'],
+                    onChanged: (val) => vm.updateField(fishingType: val),
+                  ),
+                  const SizedBox(height: 40),
+
+                  Center(
+                    child: SizedBox(
+                      width: 200,
+                      height: 55,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF56B4F8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        onPressed: () async {
+                          final success = await vm.save();
+                          if (success && context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('දත්ත සාර්ථකව සුරැකිණි!'),
+                              ),
+                            );
+                            // ඊළඟ තිරය නිර්මාණය කළ පසු මෙතැනට Navigation දමන්න
+                          }
+                        },
+                        child: const Text(
+                          'ඊළඟ පිටුවට',
+                          style: TextStyle(
+                            fontFamily: 'UNSamantha',
+                            fontSize: 24,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontFamily: 'UNSamantha',
+          fontWeight: FontWeight.bold,
+          fontSize: 15,
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputStyle({String? hint}) {
+    return InputDecoration(
+      hintText: hint,
+      filled: true,
+      fillColor: Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.lightBlue.shade200, width: 1.5),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.lightBlue.shade200, width: 1.5),
+      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required List<String> items,
+    required Function(String?) onChanged,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.fieldFill,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.lightBlue.shade200, width: 1.5),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          items: items.map((String item) {
+            return DropdownMenuItem(
+              value: item,
+              child: Text(
+                item,
+                style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 16),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+}

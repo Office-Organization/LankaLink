@@ -1,6 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/survey.dart';
+import '../models/basic_details.dart';
+import '../models/housing_details.dart';
+import '../models/income_details.dart';
+import '../models/assets_details.dart'; // 🔥 අලුත් Import එක
 
 class SurveyRepository {
   SurveyRepository(this._db);
@@ -11,10 +15,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
-      
-      if (!doc.exists || doc.data() == null) {
-        return null; 
-      }
+      if (!doc.exists || doc.data() == null) return null;
       return Survey.fromMap(doc.data()!);
     } catch (e) {
       rethrow;
@@ -25,30 +26,200 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
-
-      List<Map<String, dynamic>> membersData = family.members.map((m) => {
-        'id': m.id,
-        'nic': m.nic,
-        'fullName': m.name,
-        'dob': m.birthday.toIso8601String(),
-        'gender': m.gender,
-        'isAdult': m.isAdult,
-        'age': m.age,
-      }).toList();
+      List<Map<String, dynamic>> membersData = family.members
+          .map(
+            (m) => {
+              'id': m.id,
+              'nic': m.nic,
+              'fullName': m.name,
+              'dob': m.birthday.toIso8601String(),
+              'gender': m.gender,
+              'isAdult': m.isAdult,
+              'age': m.age,
+            },
+          )
+          .toList();
 
       await ref.set({
         'houseNumber': houseNumber,
         'hasAswasuma': family.hasAswasuma,
         'specialNeedsCount': family.specialNeedsCount,
         'specialNeedsAmount': family.specialNeedsAmount,
-        'specialNeedDescription': family.specialNeedDescription, // 🔥 අලුතින් එක් කළ කොටස
-        'members': membersData, 
+        'specialNeedDescription': family.specialNeedDescription,
+        'members': membersData,
         'updatedBy': FirebaseAuth.instance.currentUser?.uid,
         'timestamp': FieldValue.serverTimestamp(),
-      });
-
+      }, SetOptions(merge: true));
     } catch (e) {
-      rethrow; 
+      rethrow;
+    }
+  }
+
+  Future<BasicDetails?> getBasicDetails(String houseNumber) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data.containsKey('basicDetails')) {
+          final mapData = Map<String, dynamic>.from(
+            data['basicDetails'] as Map,
+          );
+          return BasicDetails.fromMap(mapData);
+        } else {
+          final survey = Survey.fromMap(data);
+          final adults = survey.family.members.where((m) => m.isAdult).toList();
+          final children = survey.family.members
+              .where((m) => !m.isAdult)
+              .toList();
+          return BasicDetails(
+            houseNumber: houseNumber,
+            headName: adults.isNotEmpty ? adults.first.name : '',
+            nic: adults.isNotEmpty ? adults.first.nic : '',
+            headGender: adults.isNotEmpty ? adults.first.gender : 'පුරුෂ',
+            children: children
+                .map(
+                  (c) => ChildInfo(
+                    id: c.id,
+                    name: c.name,
+                    gender: c.gender,
+                    dob:
+                        "${c.birthday.year}-${c.birthday.month.toString().padLeft(2, '0')}-${c.birthday.day.toString().padLeft(2, '0')}",
+                  ),
+                )
+                .toList(),
+          );
+        }
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> saveBasicDetails(
+    String houseNumber,
+    BasicDetails details,
+  ) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      await ref.set({
+        'basicDetails': details.toMap(),
+        'basicDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'basicDetailsUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<HousingDetails?> getHousingDetails(String houseNumber) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data.containsKey('housingDetails')) {
+          final mapData = Map<String, dynamic>.from(
+            data['housingDetails'] as Map,
+          );
+          return HousingDetails.fromMap(mapData);
+        }
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> saveHousingDetails(
+    String houseNumber,
+    HousingDetails details,
+  ) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      await ref.set({
+        'housingDetails': details.toMap(),
+        'housingDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'housingDetailsUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<IncomeDetails?> getIncomeDetails(String houseNumber) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data.containsKey('incomeDetails')) {
+          final mapData = Map<String, dynamic>.from(
+            data['incomeDetails'] as Map,
+          );
+          return IncomeDetails.fromMap(mapData);
+        }
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> saveIncomeDetails(
+    String houseNumber,
+    IncomeDetails details,
+  ) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      await ref.set({
+        'incomeDetails': details.toMap(),
+        'incomeDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'incomeDetailsUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  // 🔥 දේපල හා වත්කම් දත්ත ලබාගැනීම/සුරැකීම
+  Future<AssetsDetails?> getAssetsDetails(String houseNumber) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        if (data.containsKey('assetsDetails')) {
+          final mapData = Map<String, dynamic>.from(
+            data['assetsDetails'] as Map,
+          );
+          return AssetsDetails.fromMap(mapData);
+        }
+      }
+      return null;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<void> saveAssetsDetails(
+    String houseNumber,
+    AssetsDetails details,
+  ) async {
+    try {
+      String safeHouseNumber = houseNumber.replaceAll('/', '-');
+      DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      await ref.set({
+        'assetsDetails': details.toMap(),
+        'assetsDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'assetsDetailsUpdatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
     }
   }
 }

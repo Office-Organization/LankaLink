@@ -4,13 +4,19 @@ import 'core/app_theme.dart';
 import 'core/app_constants.dart';
 import 'data/auth_repository.dart';
 import 'data/survey_repository.dart';
-import 'data/voter_repository.dart'; // අලුතින් එක් කරන ලදී
+import 'data/voter_repository.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/login_view_model.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/survey/survey_screen.dart';
 import 'screens/survey/survey_view_model.dart';
 import 'screens/gn/gn_details_screen.dart';
+import 'screens/basic_details/basic_details_screen.dart';
+import 'screens/basic_details/basic_details_view_model.dart';
+import 'screens/housing/housing_screen.dart';
+import 'screens/housing/housing_view_model.dart';
+import 'screens/income/income_screen.dart'; // 🔥 අලුත් import
+import 'screens/income/income_view_model.dart'; // 🔥 අලුත් import
 
 class LankaLinkApp extends StatelessWidget {
   const LankaLinkApp({super.key});
@@ -20,23 +26,61 @@ class LankaLinkApp extends StatelessWidget {
         title: 'LankaLink',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light,
-        home: const AuthGate(), // මුලින්ම AuthGate වෙත යවයි
+        home: const AuthGate(), 
         routes: {
-          // පවුල් තොරතුරු තිරය සඳහා Route එක සහ ViewModel සැකසීම
           Routes.family: (_) => ChangeNotifierProvider(
             create: (c) => SurveyViewModel(
               c.read<SurveyRepository>(),
-              c.read<VoterRepository>(), // දෝෂය නිවැරදි කර ඇත (නමක් භාවිතා නොකර කෙලින්ම ලබා දෙයි)
+              c.read<VoterRepository>(),
             ),
             child: const SurveyScreen(),
           ),
-          // ග්‍රාම නිලධාරී තොරතුරු තිරය සඳහා Route එක
+          
+          Routes.basicDetails: (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final houseNumber = args is String ? args : ''; 
+            
+            return ChangeNotifierProvider(
+              create: (c) => BasicDetailsViewModel(
+                c.read<SurveyRepository>(), 
+                houseNumber,
+              ),
+              child: const BasicDetailsScreen(),
+            );
+          },
+
+          Routes.housing: (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final houseNumber = args is String ? args : ''; 
+            
+            return ChangeNotifierProvider(
+              create: (c) => HousingViewModel(
+                c.read<SurveyRepository>(), 
+                houseNumber,
+              ),
+              child: const HousingScreen(),
+            );
+          },
+
+          // 🔥 අලුත් Income Route එක
+          Routes.income: (context) {
+            final args = ModalRoute.of(context)?.settings.arguments;
+            final houseNumber = args is String ? args : ''; 
+            
+            return ChangeNotifierProvider(
+              create: (c) => IncomeViewModel(
+                c.read<SurveyRepository>(), 
+                houseNumber,
+              ),
+              child: const IncomeScreen(),
+            );
+          },
+
           Routes.gn: (_) => const GnDetailsScreen(),
         },
       );
 }
 
-/// පරිශීලකයා ලොග් වී ඇත්දැයි පරීක්ෂා කර අදාළ තිරය තීරණය කරන කොටස
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -44,7 +88,6 @@ class AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthRepository>();
 
-    // දත්ත පරීක්ෂා කරන තුරු Loading තිරය පෙන්වීම
     if (auth.isLoading) {
       return const Scaffold(
         body: Center(
@@ -53,7 +96,6 @@ class AuthGate extends StatelessWidget {
       );
     }
     
-    // ලොග් වී නොමැති නම් Login තිරය පෙන්වීම
     if (!auth.isSignedIn) {
       return ChangeNotifierProvider(
         create: (c) => LoginViewModel(c.read<AuthRepository>()),
@@ -61,7 +103,6 @@ class AuthGate extends StatelessWidget {
       );
     }
     
-    // සාර්ථකව ලොග් වී ඇත්නම් Dashboard එක පෙන්වීම
     return const DashboardScreen();
   }
 }

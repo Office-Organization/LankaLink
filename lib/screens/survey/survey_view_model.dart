@@ -66,6 +66,7 @@ class SurveyViewModel extends ChangeNotifier {
         specialNeedDescription: description,
       ),
     );
+    notifyListeners();
   }
 
   void addMember(FamilyMember member) {

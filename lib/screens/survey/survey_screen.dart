@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/app_screen.dart';
 import '../../widgets/app_button.dart';
+import '../../core/app_constants.dart';
 import 'survey_view_model.dart';
 import 'steps/family_step.dart';
 
@@ -35,14 +36,17 @@ class SurveyScreen extends StatelessWidget {
               label: 'සුරකින්න',
               isLoading: vm.isBusy,
               onPressed: () async {
-                final success = await context.read<SurveyViewModel>().save();
-                if (success && context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('දත්ත සාර්ථකව සුරැකිණි!')),
-                  );
-                  Navigator.pop(context); // සාර්ථක නම් Dashboard එකට ආපසු යයි
-                }
-              },
+                    final vm = context.read<SurveyViewModel>();
+                    final success = await vm.save();
+                    if (success && context.mounted) {
+                      // සාර්ථකව Save වූ පසු Basic Details තිරයට යැවීම
+                      Navigator.pushNamed(
+                        context, 
+                        Routes.basicDetails, 
+                        arguments: vm.survey.houseNumber,
+                      );
+                    }
+                  },
             ),
           ),
         ],
