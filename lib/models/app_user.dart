@@ -1,68 +1,47 @@
-import '../../core/app_constants.dart';
+enum UserStatus {
+  active,
+  inactive;
 
-enum UserStatus { active, inactive, pending }
+  static UserStatus from(String? raw) =>
+      raw == 'inactive' ? UserStatus.inactive : UserStatus.active;
+}
 
-extension UserStatusExt on UserStatus {
-  static UserStatus from(String? raw) {
-    switch (raw) {
-      case 'active':
-        return UserStatus.active;
-      case 'inactive':
-        return UserStatus.inactive;
-      default:
-        return UserStatus.pending;
-    }
-  }
+enum UserRole {
+  admin,
+  user;
 
-  String get dbValue => name;
+  static UserRole from(String? raw) =>
+      raw == 'admin' ? UserRole.admin : UserRole.user;
 }
 
 class AppUser {
   final String uid;
-  final String fullName;
+  final String name;
   final String nic;
   final String email;
-  final String mobilePhone;
-  final String? district;
-  final String? gnDivision;
   final UserStatus status;
+  final UserRole role;
 
   const AppUser({
     required this.uid,
-    required this.fullName,
+    required this.name,
     required this.nic,
     required this.email,
-    required this.mobilePhone,
-    this.district,
-    this.gnDivision,
     required this.status,
+    required this.role,
   });
 
-  factory AppUser.fromMap(String uid, Map<String, dynamic> map) {
-    return AppUser(
-      uid: uid,
-      fullName: map[Fields.fullName] as String? ?? '',
-      nic: map[Fields.nic] as String? ?? '',
-      email: map[Fields.email] as String? ?? '',
-      mobilePhone: map['mobilePhone'] as String? ?? '',
-      district: map['district'] as String?,
-      gnDivision: map['gnDivision'] as String?,
-      status: UserStatusExt.from(map[Fields.status] as String?),
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      Fields.uid: uid,
-      Fields.fullName: fullName,
-      Fields.nic: nic,
-      Fields.email: email,
-      'mobilePhone': mobilePhone,
-      'district': district,
-      'gnDivision': gnDivision,
-      Fields.status: status.dbValue,
-    };
-  }
+  // Map එකක් වෙනුවට Model එකක් භාවිත කිරීම මගින් අක්ෂර වින්‍යාස දෝෂ වළක්වා ගනී
+  factory AppUser.fromMap(String uid, Map<String, dynamic> map) => AppUser(
+    uid: uid,
+    name: map['name'] as String? ?? '',
+    nic: map['nic'] as String? ?? '',
+    email: map['email'] as String? ?? '',
+    status: UserStatus.from(map['status'] as String?),
+    role: UserRole.from(map['role'] as String?),
+  );
 
   bool get canSignIn => status == UserStatus.active;
+
+  bool get isAdmin => role == UserRole.admin;
 }

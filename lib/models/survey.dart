@@ -1,123 +1,111 @@
-import 'child.dart';
-import 'housing.dart';
-import 'income.dart';
-import 'health.dart';
-import 'voter.dart';
+import 'package:uuid/uuid.dart';
 
-class Survey {
-  final String id; // document ID = houseNumber + '_' + householderNic
-  final String houseNumber;
-  final String householderNic;
-  final String householderName;
-  final String householderGender;
-  final List<String> familyMembersNames; // from voters
-  final bool samurdhiStatus;
-  final List<Child> children;
-  final HousingInfo housing;
-  final IncomeInfo income;
-  final HealthInfo health;
-  final String surveyStatus; // e.g. 'step1_completed', 'step2_completed', etc.
+class FamilyMember {
+  final String id;
+  final String name;
+  final DateTime birthday;
+  final String gender;
+  final String nic;
 
-  const Survey({
-    required this.id,
-    required this.houseNumber,
-    required this.householderNic,
-    required this.householderName,
-    required this.householderGender,
-    this.familyMembersNames = const [],
-    this.samurdhiStatus = false,
-    this.children = const [],
-    this.housing = const HousingInfo(),
-    this.income = const IncomeInfo(),
-    this.health = const HealthInfo(),
-    this.surveyStatus = 'draft',
+  FamilyMember({
+    String? id,
+    required this.name,
+    required this.birthday,
+    required this.gender,
+    this.nic = '',
+  }) : id = id ?? const Uuid().v4();
+
+  int get age {
+    final now = DateTime.now();
+    int calculatedAge = now.year - birthday.year;
+    if (now.month < birthday.month || (now.month == birthday.month && now.day < birthday.day)) {
+      calculatedAge--;
+    }
+    return calculatedAge;
+  }
+
+  bool get isAdult => age >= 18;
+
+  FamilyMember copyWith({String? name, DateTime? birthday, String? gender, String? nic}) {
+    return FamilyMember(
+      id: id,
+      name: name ?? this.name,
+      birthday: birthday ?? this.birthday,
+      gender: gender ?? this.gender,
+      nic: nic ?? this.nic,
+    );
+  }
+
+  factory FamilyMember.fromMap(Map<String, dynamic> map) {
+    return FamilyMember(
+      id: map['id'] as String?,
+      name: map['fullName'] as String? ?? '',
+      birthday: map['dob'] != null ? DateTime.parse(map['dob']) : DateTime.now(),
+      gender: map['gender'] as String? ?? '',
+      nic: map['nic'] as String? ?? '',
+    );
+  }
+}
+
+class FamilyInfo {
+  final List<FamilyMember> members;
+  final bool hasAswasuma;
+  final int specialNeedsCount;
+  final double specialNeedsAmount;
+  final String specialNeedDescription; // 🔥 අලුතින් එක් කළ කොටස
+
+  const FamilyInfo({
+    this.members = const [],
+    this.hasAswasuma = false,
+    this.specialNeedsCount = 0,
+    this.specialNeedsAmount = 0.0,
+    this.specialNeedDescription = '',
   });
 
-  factory Survey.blank(String houseNumber, Voter head, List<Voter> allVoters) {
-    return Survey(
-      id: '${houseNumber}_${head.nic}',
-      houseNumber: houseNumber,
-      householderNic: head.nic,
-      householderName: head.name,
-      householderGender: head.gender ?? 'Male',
-      familyMembersNames: allVoters.map((v) => v.name).toList(),
-    );
-  }
-
-  factory Survey.fromMap(String id, Map<String, dynamic> map) {
-    final householder = map['householder'] as Map<String, dynamic>? ?? {};
-    final aswesuma = map['aswesuma'] as Map<String, dynamic>? ?? {};
-    final childrenList = (map['children'] as List<dynamic>? ?? [])
-        .map((c) => Child.fromMap(c as Map<String, dynamic>))
-        .toList();
-    final housingMap = map['housingAndLiving'] as Map<String, dynamic>? ?? {};
-    final incomeMap = map['incomeSources'] as Map<String, dynamic>? ?? {};
-    final healthMap = map['healthAndNutrition'] as Map<String, dynamic>? ?? {};
-    final familyMembers = (map['familyMembersNames'] as List<dynamic>? ?? [])
-        .map((e) => e.toString())
-        .toList();
-
-    return Survey(
-      id: id,
-      houseNumber: map['houseNumber'] as String? ?? '',
-      householderNic: householder['nic'] as String? ?? '',
-      householderName: householder['fullName'] as String? ?? '',
-      householderGender: householder['gender'] as String? ?? 'Male',
-      familyMembersNames: familyMembers,
-      samurdhiStatus: map['samurdhiStatus'] as bool? ?? false,
-      children: childrenList,
-      housing: HousingInfo.fromMap(housingMap),
-      income: IncomeInfo.fromMap(incomeMap),
-      health: HealthInfo.fromMap(healthMap),
-      surveyStatus: map['surveyStatus'] as String? ?? 'draft',
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'houseNumber': houseNumber,
-      'householder': {
-        'nic': householderNic,
-        'fullName': householderName,
-        'gender': householderGender,
-      },
-      'familyMembersNames': familyMembersNames,
-      'samurdhiStatus': samurdhiStatus,
-      'children': children.map((c) => c.toMap()).toList(),
-      'housingAndLiving': housing.toMap(),
-      'incomeSources': income.toMap(),
-      'healthAndNutrition': health.toMap(),
-      'surveyStatus': surveyStatus,
-    };
-  }
-
-  Survey copyWith({
-    String? id,
-    String? houseNumber,
-    String? householderNic,
-    String? householderName,
-    String? householderGender,
-    List<String>? familyMembersNames,
-    bool? samurdhiStatus,
-    List<Child>? children,
-    HousingInfo? housing,
-    IncomeInfo? income,
-    HealthInfo? health,
-    String? surveyStatus,
+  FamilyInfo copyWith({
+    List<FamilyMember>? members, 
+    bool? hasAswasuma,
+    int? specialNeedsCount,
+    double? specialNeedsAmount,
+    String? specialNeedDescription,
   }) {
+    return FamilyInfo(
+      members: members ?? this.members,
+      hasAswasuma: hasAswasuma ?? this.hasAswasuma,
+      specialNeedsCount: specialNeedsCount ?? this.specialNeedsCount,
+      specialNeedsAmount: specialNeedsAmount ?? this.specialNeedsAmount,
+      specialNeedDescription: specialNeedDescription ?? this.specialNeedDescription,
+    );
+  }
+}
+
+class Survey {
+  final String houseNumber;
+  final FamilyInfo family;
+
+  const Survey({
+    this.houseNumber = '',
+    this.family = const FamilyInfo(),
+  });
+
+  Survey copyWith({String? houseNumber, FamilyInfo? family}) => Survey(
+    houseNumber: houseNumber ?? this.houseNumber,
+    family: family ?? this.family,
+  );
+
+  factory Survey.fromMap(Map<String, dynamic> map) {
+    final membersList = (map['members'] as List<dynamic>?) ?? [];
+    final members = membersList.map((m) => FamilyMember.fromMap(m as Map<String, dynamic>)).toList();
+
     return Survey(
-      id: id ?? this.id,
-      houseNumber: houseNumber ?? this.houseNumber,
-      householderNic: householderNic ?? this.householderNic,
-      householderName: householderName ?? this.householderName,
-      householderGender: householderGender ?? this.householderGender,
-      familyMembersNames: familyMembersNames ?? this.familyMembersNames,
-      samurdhiStatus: samurdhiStatus ?? this.samurdhiStatus,
-      children: children ?? this.children,
-      housing: housing ?? this.housing,
-      income: income ?? this.income,
-      health: health ?? this.health,
-      surveyStatus: surveyStatus ?? this.surveyStatus,
+      houseNumber: map['houseNumber'] as String? ?? '',
+      family: FamilyInfo(
+        members: members,
+        hasAswasuma: map['hasAswasuma'] as bool? ?? false,
+        specialNeedsCount: map['specialNeedsCount'] as int? ?? 0,
+        specialNeedsAmount: (map['specialNeedsAmount'] ?? 0.0).toDouble(),
+        specialNeedDescription: map['specialNeedDescription'] as String? ?? '', // 🔥 අලුතින් එක් කළ කොටස
+      ),
     );
   }
 }
