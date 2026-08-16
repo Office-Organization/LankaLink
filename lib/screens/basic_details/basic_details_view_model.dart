@@ -4,11 +4,11 @@ import '../../models/basic_details.dart';
 
 class BasicDetailsViewModel extends ChangeNotifier {
   BasicDetailsViewModel(this._repository, this.houseNumber) {
-    isBusy = true; // තිරය විවෘත වෙද්දීම Loading පෙන්වීමට
+    isBusy = true;
     details = details.copyWith(houseNumber: houseNumber);
-    _loadData(); 
+    _loadData();
   }
-  
+
   final SurveyRepository _repository;
   final String houseNumber;
 
@@ -20,29 +20,39 @@ class BasicDetailsViewModel extends ChangeNotifier {
     try {
       final fetchedDetails = await _repository.getBasicDetails(houseNumber);
       if (fetchedDetails != null) {
-        details = fetchedDetails; 
+        details = fetchedDetails;
       }
     } catch (e) {
       error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය.';
     } finally {
-      isBusy = false; 
+      isBusy = false;
       notifyListeners();
     }
   }
 
   void updateField({
-    String? headGender, String? headName, String? nic, 
-    String? dob, String? phone, String? email, 
-    String? nationality, bool? hasAntiSocialActivities, 
-    String? antiSocialDescription
+    String? headGender,
+    String? headName,
+    String? nic,
+    String? dob,
+    String? phone,
+    String? email,
+    String? nationality,
+    bool? hasAntiSocialActivities,
+    String? antiSocialDescription,
   }) {
     details = details.copyWith(
-      headGender: headGender, headName: headName, nic: nic,
-      dob: dob, phone: phone, email: email,
-      nationality: nationality, hasAntiSocialActivities: hasAntiSocialActivities,
+      headGender: headGender,
+      headName: headName,
+      nic: nic,
+      dob: dob,
+      phone: phone,
+      email: email,
+      nationality: nationality,
+      hasAntiSocialActivities: hasAntiSocialActivities,
       antiSocialDescription: antiSocialDescription,
     );
-    notifyListeners(); // UI එක Update කරයි
+    notifyListeners();
   }
 
   void addChild(ChildInfo child) {
@@ -51,11 +61,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 🔥 දරුවන්ගේ තොරතුරු සංස්කරණය (Edit) කිරීම
   void updateChild(ChildInfo updatedChild) {
-    final updatedList = details.children.map((c) {
-      return c.id == updatedChild.id ? updatedChild : c;
-    }).toList();
+    final updatedList = details.children
+        .map((c) => c.id == updatedChild.id ? updatedChild : c)
+        .toList();
     details = details.copyWith(children: updatedList);
     notifyListeners();
   }
@@ -66,6 +75,54 @@ class BasicDetailsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 🔥 වෙනත් සාමාජිකයන් (Other Members) සඳහා Methods
+  void addOtherMember(OtherMemberInfo member) {
+    final updatedList = List<OtherMemberInfo>.from(details.otherMembers)
+      ..add(member);
+    details = details.copyWith(otherMembers: updatedList);
+    notifyListeners();
+  }
+
+  void updateOtherMember(OtherMemberInfo updatedMember) {
+    final updatedList = details.otherMembers
+        .map((m) => (m.id) == (updatedMember.id) ? updatedMember : m)
+        .toList();
+    details = details.copyWith(otherMembers: updatedList);
+    notifyListeners();
+  }
+
+  void removeOtherMember(String id) {
+    final updatedList = details.otherMembers
+        .where((m) => (m.id) != id)
+        .toList();
+    details = details.copyWith(otherMembers: updatedList);
+    notifyListeners();
+  }
+
+  // 🔥 Age Calculation Methods
+  int getAge(String dateOfBirth) {
+    try {
+      final dob = DateTime.parse(dateOfBirth);
+      final now = DateTime.now();
+      int age = now.year - dob.year;
+      if (now.month < dob.month ||
+          (now.month == dob.month && now.day < dob.day)) {
+        age--;
+      }
+      return age;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  bool isChild(String dateOfBirth) {
+    return getAge(dateOfBirth) < 18;
+  }
+
+  String getCategoryLabel(String dateOfBirth) {
+    return isChild(dateOfBirth) ? '(ළමා)' : '(වැඩිහිටි)';
+  }
+
   Future<bool> save() async {
     if (details.headName.isEmpty || details.nic.isEmpty) {
       error = 'කරුණාකර ගෘහ මූලිකයාගේ නම සහ NIC අංකය ඇතුළත් කරන්න.';
@@ -73,7 +130,9 @@ class BasicDetailsViewModel extends ChangeNotifier {
       return false;
     }
 
-    isBusy = true; error = null; notifyListeners();
+    isBusy = true;
+    error = null;
+    notifyListeners();
 
     try {
       await _repository.saveBasicDetails(houseNumber, details);
@@ -82,7 +141,8 @@ class BasicDetailsViewModel extends ChangeNotifier {
       error = 'දෝෂය: ${e.toString()}';
       return false;
     } finally {
-      isBusy = false; notifyListeners(); 
+      isBusy = false;
+      notifyListeners();
     }
   }
 }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:lankalink/core/admin_dashboard_screen.dart';
+import 'package:lankalink/screens/auth/login_view_model.dart';
+import 'package:provider/provider.dart';
 import 'signup_screen.dart';
 import '../dashboard/dashboard_screen.dart'; // අලුතින් සෑදූ Dashboard එක Import කිරීම
 
@@ -13,97 +13,51 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _nicController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
-  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   Future<void> _loginUser() async {
-    String nic = _nicController.text.trim();
-    String password = _passwordController.text.trim();
+    final vm = context.read<LoginViewModel>();
+    final success = await vm.login(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
 
-    if (nic.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('කරුණාකර NIC අංකය සහ මුරපදය ඇතුළත් කරන්න.'),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      var userQuery = await FirebaseFirestore.instance
-          .collection('users')
-          .where('nic', isEqualTo: nic)
-          .limit(1)
-          .get();
-
-      if (userQuery.docs.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('මෙම ජාතික හැඳුනුම්පත් අංකය ලියාපදිංචි කර නොමැත.'),
-            ),
-          );
-        }
-        setState(() {
-          _isLoading = false;
-        });
-        return;
-      }
-
-      String userEmail = userQuery.docs.first.get('email');
-
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: userEmail,
-        password: password,
-      );
-
-      if (mounted) {
+    if (mounted) {
+      if (success) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('ඔබ සාර්ථකව ලොග් විය!')));
 
-        // සාර්ථකව ලොග් වූ පසු Dashboard එක වෙත Redirect කිරීම
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
+        final page = vm.user!.isAdmin
+            ? const AdminDashboardScreen()
+            : const DashboardScreen();
+
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => page),
+          (route) => false,
         );
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = 'දෝෂයක් මතු විය.';
-      if (e.code == 'user-not-found' ||
-          e.code == 'wrong-password' ||
-          e.code == 'invalid-credential') {
-        errorMessage = 'ඔබ ඇතුළත් කළ මුරපදය වැරදියි.';
-      }
-      if (mounted) {
+      } else if (vm.error != null) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ලොග් වීමේදී දෝෂයක් මතු විය.')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        ).showSnackBar(SnackBar(content: Text(vm.error!)));
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final vm = context.watch<LoginViewModel>();
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -113,10 +67,11 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 60),
-              Text(
-                'Login in now',
+              const Text(
+                'දැන්ම ලොග් වන්න',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
+                style: TextStyle(
+                  fontFamily: 'UNSamantha',
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
@@ -124,31 +79,34 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'please login to continue using the app',
+                'යෙදුම භාවිත කිරීමට කරුණාකර ලොග් වන්න',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
+                style: TextStyle(
+                  fontFamily: 'UNGanganee',
                   fontSize: 12,
                   color: Colors.grey.shade600,
                 ),
               ),
               const SizedBox(height: 60),
-              Text(
-                'Enter Your NIC',
-                style: GoogleFonts.poppins(
+              const Text(
+                'ඔබගේ ඊමේල් ලිපිනය ඇතුලත් කරන්න',
+                style: TextStyle(
+                  fontFamily: 'UNSamantha',
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: _nicController,
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  hintText: 'V87XXXXXXXXX',
+                  hintText: 'ඊමේල් ලිපිනය',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   suffixIcon: Icon(
-                    Icons.badge_outlined,
+                    Icons.email_outlined,
                     color: Colors.blue.shade300,
                   ),
                   border: OutlineInputBorder(
@@ -162,9 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                'Enter Your Password',
-                style: GoogleFonts.poppins(
+              const Text(
+                'ඔබගේ මුරපදය ඇතුලත් කරන්න',
+                style: TextStyle(
+                  fontFamily: 'UNSamantha',
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
@@ -174,7 +133,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: '****************',
+                  hintText: 'මුරපදය',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   filled: true,
                   fillColor: Colors.grey.shade100,
@@ -206,12 +165,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {},
-                  child: Text(
-                    'Forgot Password ?',
-                    style: GoogleFonts.poppins(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                    ),
+                  child: const Text(
+                    'මුරපදය අමතකද?',
+                    style: TextStyle(color: Colors.black54, fontSize: 12),
                   ),
                 ),
               ),
@@ -234,7 +190,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _loginUser,
+                  onPressed: vm.isLoading ? null : _loginUser,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
@@ -243,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     disabledBackgroundColor: Colors.grey.shade400,
                   ),
-                  child: _isLoading
+                  child: vm.isLoading
                       ? const SizedBox(
                           height: 24,
                           width: 24,
@@ -252,10 +208,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : Text(
-                          'Login',
-                          style: GoogleFonts.poppins(
+                      : const Text(
+                          'ලොග් වන්න',
+                          style: TextStyle(
                             fontSize: 18,
+                            fontFamily: 'UNSamantha',
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -266,12 +223,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Don\'t have an account? ',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
+                  const Text(
+                    'ගිණුමක් නැද්ද? ',
+                    style: TextStyle(fontSize: 12, color: Colors.black87),
                   ),
                   GestureDetector(
                     onTap: () {
@@ -282,10 +236,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       );
                     },
-                    child: Text(
-                      'Sign Up',
-                      style: GoogleFonts.poppins(
+                    child: const Text(
+                      'ලියාපදිංචි වන්න',
+                      style: TextStyle(
                         fontSize: 12,
+                        fontFamily: 'UNSamantha',
                         color: Colors.lightBlue,
                         fontWeight: FontWeight.w600,
                       ),
@@ -293,6 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
             ],
           ),
         ),

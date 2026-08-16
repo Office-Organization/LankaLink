@@ -1,5 +1,49 @@
 import 'package:uuid/uuid.dart';
 
+class OtherMemberInfo {
+  OtherMemberInfo({
+    String? id,
+    this.name,
+    this.relationship,
+    this.gender,
+    this.dateOfBirth,
+    this.nic,
+    this.phone,
+    this.occupation,
+  }) : id = id ?? const Uuid().v4();
+
+  final String id;
+  final String? name;
+  final String? relationship;
+  final String? gender;
+  final String? dateOfBirth;
+  final String? nic;
+  final String? phone;
+  final String? occupation;
+
+  OtherMemberInfo copyWith({
+    String? id,
+    String? name,
+    String? relationship,
+    String? gender,
+    String? dateOfBirth,
+    String? nic,
+    String? phone,
+    String? occupation,
+  }) {
+    return OtherMemberInfo(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      relationship: relationship ?? this.relationship,
+      gender: gender ?? this.gender,
+      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
+      nic: nic ?? this.nic,
+      phone: phone ?? this.phone,
+      occupation: occupation ?? this.occupation,
+    );
+  }
+}
+
 class ChildInfo {
   final String id;
   final String name;
@@ -58,7 +102,8 @@ class ChildInfo {
       hasOtherNeed: map['hasOtherNeed'] as bool? ?? false,
       receivesGovtAssistance: map['receivesGovtAssistance'] as bool? ?? false,
       disabilityAllowance: (map['disabilityAllowance'] ?? 0.0).toDouble(),
-      chronicIllnessAllowance: (map['chronicIllnessAllowance'] ?? 0.0).toDouble(),
+      chronicIllnessAllowance: (map['chronicIllnessAllowance'] ?? 0.0)
+          .toDouble(),
     );
   }
 }
@@ -73,6 +118,7 @@ class BasicDetails {
   final String email;
   final String nationality;
   final List<ChildInfo> children;
+  final List<OtherMemberInfo> otherMembers;
   final bool hasAntiSocialActivities;
   final String antiSocialDescription;
 
@@ -86,6 +132,7 @@ class BasicDetails {
     this.email = '',
     this.nationality = 'සිංහල',
     this.children = const [],
+    this.otherMembers = const [],
     this.hasAntiSocialActivities = false,
     this.antiSocialDescription = '',
   });
@@ -100,6 +147,7 @@ class BasicDetails {
     String? email,
     String? nationality,
     List<ChildInfo>? children,
+    List<OtherMemberInfo>? otherMembers,
     bool? hasAntiSocialActivities,
     String? antiSocialDescription,
   }) {
@@ -113,8 +161,11 @@ class BasicDetails {
       email: email ?? this.email,
       nationality: nationality ?? this.nationality,
       children: children ?? this.children,
-      hasAntiSocialActivities: hasAntiSocialActivities ?? this.hasAntiSocialActivities,
-      antiSocialDescription: antiSocialDescription ?? this.antiSocialDescription,
+      otherMembers: otherMembers ?? this.otherMembers,
+      hasAntiSocialActivities:
+          hasAntiSocialActivities ?? this.hasAntiSocialActivities,
+      antiSocialDescription:
+          antiSocialDescription ?? this.antiSocialDescription,
     );
   }
 
@@ -128,6 +179,20 @@ class BasicDetails {
     'email': email,
     'nationality': nationality,
     'children': children.map((c) => c.toMap()).toList(),
+    'otherMembers': otherMembers
+        .map(
+          (m) => {
+            'id': m.id,
+            'name': m.name,
+            'relationship': m.relationship,
+            'gender': m.gender,
+            'dateOfBirth': m.dateOfBirth,
+            'nic': m.nic,
+            'phone': m.phone,
+            'occupation': m.occupation,
+          },
+        )
+        .toList(),
     'hasAntiSocialActivities': hasAntiSocialActivities,
     'antiSocialDescription': antiSocialDescription,
   };
@@ -135,6 +200,7 @@ class BasicDetails {
   // 🔥 Firestore හි දත්ත නැවත කියවීම සඳහා
   factory BasicDetails.fromMap(Map<String, dynamic> map) {
     final childList = (map['children'] as List<dynamic>?) ?? [];
+    final otherMembersList = (map['otherMembers'] as List<dynamic>?) ?? [];
     return BasicDetails(
       houseNumber: map['houseNumber'] as String? ?? '',
       headGender: map['headGender'] as String? ?? 'පුරුෂ',
@@ -144,7 +210,23 @@ class BasicDetails {
       phone: map['phone'] as String? ?? '',
       email: map['email'] as String? ?? '',
       nationality: map['nationality'] as String? ?? 'සිංහල',
-      children: childList.map((c) => ChildInfo.fromMap(c as Map<String, dynamic>)).toList(),
+      children: childList
+          .map((c) => ChildInfo.fromMap(c as Map<String, dynamic>))
+          .toList(),
+      otherMembers: otherMembersList.map((m) {
+        final memberMap = m as Map<String, dynamic>;
+        final savedId = memberMap['id'] as String?;
+        return OtherMemberInfo(
+          id: savedId == null || savedId.isEmpty ? null : savedId,
+          name: memberMap['name'] as String?,
+          relationship: memberMap['relationship'] as String?,
+          gender: memberMap['gender'] as String?,
+          dateOfBirth: memberMap['dateOfBirth'] as String?,
+          nic: memberMap['nic'] as String?,
+          phone: memberMap['phone'] as String?,
+          occupation: memberMap['occupation'] as String?,
+        );
+      }).toList(),
       hasAntiSocialActivities: map['hasAntiSocialActivities'] as bool? ?? false,
       antiSocialDescription: map['antiSocialDescription'] as String? ?? '',
     );

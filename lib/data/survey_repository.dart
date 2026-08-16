@@ -13,10 +13,23 @@ class SurveyRepository {
 
   Future<Survey?> getSurveyByHouseNumber(String houseNumber) async {
     try {
+      // Check user authentication
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Auth Error: Please sign in to access survey data.');
+      }
+
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
       if (!doc.exists || doc.data() == null) return null;
       return Survey.fromMap(doc.data()!);
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw Exception(
+          'Firebase Permission Error: Make sure Firestore rules allow reads for authenticated users.',
+        );
+      }
+      rethrow;
     } catch (e) {
       rethrow;
     }
@@ -57,6 +70,12 @@ class SurveyRepository {
 
   Future<BasicDetails?> getBasicDetails(String houseNumber) async {
     try {
+      // Check user authentication
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception('Auth Error: Please sign in to access family data.');
+      }
+
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
       if (doc.exists && doc.data() != null) {
@@ -92,6 +111,13 @@ class SurveyRepository {
         }
       }
       return null;
+    } on FirebaseException catch (e) {
+      if (e.code == 'permission-denied') {
+        throw Exception(
+          'Firebase Permission Error: Make sure you are signed in and have proper access to this data.',
+        );
+      }
+      rethrow;
     } catch (e) {
       rethrow;
     }

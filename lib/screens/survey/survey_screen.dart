@@ -6,9 +6,14 @@ import '../../core/app_constants.dart';
 import 'survey_view_model.dart';
 import 'steps/family_step.dart';
 
-class SurveyScreen extends StatelessWidget {
+class SurveyScreen extends StatefulWidget {
   const SurveyScreen({super.key});
 
+  @override
+  State<SurveyScreen> createState() => _SurveyScreenState();
+}
+
+class _SurveyScreenState extends State<SurveyScreen> {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SurveyViewModel>();
@@ -36,17 +41,23 @@ class SurveyScreen extends StatelessWidget {
               label: 'සුරකින්න',
               isLoading: vm.isBusy,
               onPressed: () async {
-                    final vm = context.read<SurveyViewModel>();
-                    final success = await vm.save();
-                    if (success && context.mounted) {
-                      // සාර්ථකව Save වූ පසු Basic Details තිරයට යැවීම
-                      Navigator.pushNamed(
-                        context, 
-                        Routes.basicDetails, 
-                        arguments: vm.survey.houseNumber,
-                      );
-                    }
-                  },
+                final vm = context.read<SurveyViewModel>();
+                final success = await vm.save();
+                if (success && context.mounted) {
+                  // සාර්ථකව Save වූ පසු Basic Details තිරයට යැවීම
+                  await Navigator.pushNamed(
+                    context,
+                    Routes.basicDetails,
+                    arguments: vm.survey.houseNumber,
+                  );
+
+                  // Reload once after returning from the next form. Doing this
+                  // here avoids a reload loop caused by provider notifications.
+                  if (context.mounted) {
+                    await context.read<SurveyViewModel>().refreshMembers();
+                  }
+                }
+              },
             ),
           ),
         ],

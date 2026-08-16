@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
+import '../../core/app_constants.dart';
 import 'income_view_model.dart';
 
 class IncomeScreen extends StatelessWidget {
@@ -12,19 +13,19 @@ class IncomeScreen extends StatelessWidget {
     final details = vm.details;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.lightBlue),
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.lightBlue),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'ආදායම් මාර්ග',
           style: TextStyle(
             fontFamily: 'UNSamantha',
-            color: Colors.black87,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
@@ -33,7 +34,7 @@ class IncomeScreen extends StatelessWidget {
       ),
       body: vm.isBusy
           ? const Center(
-              child: CircularProgressIndicator(color: Colors.lightBlue),
+              child: CircularProgressIndicator(color: AppColors.lightBlue),
             )
           : SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -44,12 +45,12 @@ class IncomeScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 16),
-                      color: Colors.red.shade100,
+                      color: AppColors.dangerBackground,
                       width: double.infinity,
                       child: Text(
                         vm.error!,
                         style: const TextStyle(
-                          color: Colors.red,
+                          color: AppColors.danger,
                           fontFamily: 'UNGanganee',
                         ),
                       ),
@@ -84,13 +85,13 @@ class IncomeScreen extends StatelessWidget {
                     onChanged: (val) => vm.updateField(jobType: val),
                   ),
 
-                  // 🔥 Logic: රැකියාවක් ඇත්නම් පමණක් තනතුර සහ ආයතනය පෙන්වන්න
+                  // Logic: රැකියාවක් ඇත්නම් පමණක් තනතුර සහ ආයතනය පෙන්වන්න
                   if (details.jobType != 'නැත') ...[
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
+                        color: AppColors.fieldFill,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -139,7 +140,7 @@ class IncomeScreen extends StatelessWidget {
                     items: ['සේවා සැපයීම', 'පහසුකම් සැපයීම', 'වෙනත්', 'නැත'],
                     onChanged: (val) => vm.updateField(tourismType: val),
                   ),
-                  // 🔥 Logic: වෙනත් නම් විස්තරය අසන්න
+                  // Logic: වෙනත් නම් විස්තරය අසන්න
                   if (details.tourismType == 'වෙනත්') ...[
                     const SizedBox(height: 8),
                     TextFormField(
@@ -189,7 +190,7 @@ class IncomeScreen extends StatelessWidget {
                       decoration: _inputStyle(hint: 'කුමන සතුන්ද?'),
                     ),
                   ],
-                  // 🔥 Logic: නැත හැර වෙනත් එකක් තේරුවහොත් සතුන් ගණන අසන්න
+                  // Logic: නැත හැර වෙනත් එකක් තේරුවහොත් සතුන් ගණන අසන්න
                   if (details.animalHusbandryType != 'නැත') ...[
                     const SizedBox(height: 12),
                     const Text(
@@ -224,7 +225,7 @@ class IncomeScreen extends StatelessWidget {
                       height: 55,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF56B4F8),
+                          backgroundColor: AppColors.secondary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -238,7 +239,12 @@ class IncomeScreen extends StatelessWidget {
                                 content: Text('දත්ත සාර්ථකව සුරැකිණි!'),
                               ),
                             );
-                            // ඊළඟ තිරය නිර්මාණය කළ පසු මෙතැනට Navigation දමන්න
+                            // 🔥 අලුත් Assets Main තිරයට යොමු කිරීම
+                            Navigator.pushNamed(
+                              context,
+                              Routes.assetsMain,
+                              arguments: vm.houseNumber,
+                            );
                           }
                         },
                         child: const Text(
@@ -246,7 +252,7 @@ class IncomeScreen extends StatelessWidget {
                           style: TextStyle(
                             fontFamily: 'UNSamantha',
                             fontSize: 24,
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -278,14 +284,14 @@ class IncomeScreen extends StatelessWidget {
     return InputDecoration(
       hintText: hint,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: AppColors.white,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.lightBlue.shade200, width: 1.5),
+        borderSide: BorderSide(color: AppColors.lightBlue200, width: 1.5),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
-        borderSide: BorderSide(color: Colors.lightBlue.shade200, width: 1.5),
+        borderSide: BorderSide(color: AppColors.lightBlue200, width: 1.5),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
     );
@@ -300,14 +306,17 @@ class IncomeScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.fieldFill,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.lightBlue.shade200, width: 1.5),
+        border: Border.all(color: AppColors.lightBlue200, width: 1.5),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: value,
           isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          icon: const Icon(
+            Icons.keyboard_arrow_down,
+            color: AppColors.textDisabled,
+          ),
           items: items.map((String item) {
             return DropdownMenuItem(
               value: item,

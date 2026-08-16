@@ -15,14 +15,20 @@ import 'data/voter_repository.dart';
 void main() async {
   // Firebase ආරම්භ කිරීමට පෙර Flutter Binding සහතික කිරීම
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Firebase Initialize කිරීම
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final db = FirebaseFirestore.instance;
   final auth = FirebaseAuth.instance;
+
+  // Enable Firestore Offline Persistence
+  try {
+    await db.enableNetwork();
+    db.settings = const Settings(persistenceEnabled: true);
+  } catch (e) {
+    // Offline persistence error - app will still work with network
+  }
 
   runApp(
     MultiProvider(

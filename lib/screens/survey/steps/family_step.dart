@@ -240,7 +240,7 @@ class _FamilyStepState extends State<FamilyStep> {
                         const SizedBox(width: 8),
                         Switch(
                           value: family.hasAswasuma,
-                          activeColor: AppColors.primary,
+                          activeThumbColor: AppColors.primary,
                           onChanged: (val) {
                             context.read<SurveyViewModel>().toggleAswasuma(val);
                           },
@@ -275,26 +275,6 @@ class _FamilyStepState extends State<FamilyStep> {
 
           const SizedBox(height: 32),
 
-          OutlinedButton.icon(
-            onPressed: () async {
-              final newMember = await showDialog<FamilyMember>(
-                context: context,
-                builder: (_) => const AddMemberDialog(),
-              );
-              if (newMember != null && context.mounted) {
-                context.read<SurveyViewModel>().addMember(newMember);
-              }
-            },
-            icon: const Icon(Icons.add, color: AppColors.primary),
-            label: const Text('සාමාජිකයෙකු එක් කරන්න', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: AppColors.primary, width: 2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-          ),
-          const SizedBox(height: 20),
-
           _buildCard(
             child: const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -325,12 +305,12 @@ class _FamilyStepState extends State<FamilyStep> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: AppColors.primary.withOpacity(0.1),
+          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
           child: Icon(
             member.gender == 'ස්ත්‍රී' ? Icons.face_3 : Icons.face,
             color: AppColors.primary,
@@ -372,7 +352,7 @@ class _FamilyStepState extends State<FamilyStep> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

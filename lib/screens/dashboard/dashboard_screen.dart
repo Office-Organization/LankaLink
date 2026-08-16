@@ -21,8 +21,12 @@ class DashboardScreen extends StatelessWidget {
             context.read<AuthRepository>().signOut();
           },
           child: const Text(
-            'Back To Login',
-            style: TextStyle(color: Colors.grey, fontSize: 14),
+            'පිටවීම',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 14,
+              fontFamily: 'UNSamantha',
+            ),
           ),
         ),
       ),
@@ -39,6 +43,7 @@ class DashboardScreen extends StatelessWidget {
                 'ආයුබෝවන්',
                 textAlign: TextAlign.center,
                 style: TextStyle(
+                  fontFamily: 'UNSamantha',
                   fontSize: 40,
                   fontWeight: FontWeight.bold,
                   color: Colors.black87,
@@ -114,6 +119,7 @@ class _MenuButton extends StatelessWidget {
               label,
               textAlign: TextAlign.center,
               style: const TextStyle(
+                fontFamily: 'UNSamantha',
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,

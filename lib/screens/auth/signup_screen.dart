@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -129,7 +128,8 @@ class _SignupScreenState extends State<SignupScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.poppins(
+          style: const TextStyle(
+            fontFamily: 'UNSamantha',
             fontSize: 12,
             fontWeight: FontWeight.w500,
             color: Colors.black87,
@@ -198,9 +198,10 @@ class _SignupScreenState extends State<SignupScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                'Signup',
-                style: GoogleFonts.poppins(
+              const Text(
+                'ලියාපදිංචි වන්න',
+                style: TextStyle(
+                  fontFamily: 'UNSamantha',
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.black54,
@@ -209,39 +210,39 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 24),
 
               _buildTextField(
-                'Name',
-                'Enter Your Name',
+                'නම',
+                'ඔබගේ නම ඇතුළත් කරන්න',
                 Icons.person_outline,
                 _nameController,
               ),
               _buildTextField(
-                'NIC Number',
-                'Enter Your NIC',
+                'ජාතික හැඳුනුම්පත් අංකය',
+                'ජා.හැ. අංකය ඇතුළත් කරන්න',
                 Icons.badge_outlined,
                 _nicController,
               ),
               _buildTextField(
-                'Email',
-                'Enter Your Email Adress',
+                'ඊමේල් ලිපිනය',
+                'ඔබගේ ඊමේල් ලිපිනය ඇතුළත් කරන්න',
                 Icons.email_outlined,
                 _emailController,
               ),
               _buildTextField(
-                'Phone Number',
-                'Enter Your Phone Number',
+                'දුරකථන අංකය',
+                'ඔබගේ දුරකථන අංකය ඇතුළත් කරන්න',
                 Icons.phone_in_talk_outlined,
                 _phoneController,
               ),
               _buildTextField(
-                'Password',
-                '**************',
+                'මුරපදය',
+                'මුරපදය',
                 Icons.lock_outline,
                 _passwordController,
                 isPassword: true,
               ),
               _buildTextField(
-                'Enter Password Again',
-                '**************',
+                'මුරපදය නැවත ඇතුළත් කරන්න',
+                'මුරපදය',
                 Icons.lock_outline,
                 _confirmPasswordController,
                 isConfirmPassword: true,
@@ -289,9 +290,10 @@ class _SignupScreenState extends State<SignupScreen> {
                             strokeWidth: 2,
                           ),
                         )
-                      : Text(
-                          'Sign Up',
-                          style: GoogleFonts.poppins(
+                      : const Text(
+                          'ලියාපදිංචි වන්න',
+                          style: TextStyle(
+                            fontFamily: 'UNSamantha',
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -305,9 +307,9 @@ class _SignupScreenState extends State<SignupScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'Already Registered ? ',
-                    style: GoogleFonts.poppins(
+                  const Text(
+                    'ගිණුමක් සාදා තිබේද? ',
+                    style: TextStyle(
                       fontSize: 12,
                       color: Colors.black87,
                     ),
@@ -316,10 +318,11 @@ class _SignupScreenState extends State<SignupScreen> {
                     onTap: () {
                       Navigator.pop(context);
                     },
-                    child: Text(
-                      'Sign in',
-                      style: GoogleFonts.poppins(
+                    child: const Text(
+                      'ලොග් වන්න',
+                      style: TextStyle(
                         fontSize: 12,
+                        fontFamily: 'UNSamantha',
                         color: Colors.lightBlue,
                         fontWeight: FontWeight.w600,
                       ),
