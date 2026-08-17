@@ -7,15 +7,16 @@ import '../../data/auth_repository.dart';
 
 class LoginViewModel extends ChangeNotifier {
   LoginViewModel(this._auth);
-  final AuthRepository _auth; // Not used directly, but good practice to keep
+  final AuthRepository _auth;
 
   bool isLoading = false;
   String? error;
   AppUser? user;
+  String? userRole; // Added to temporarily hold the role directly from Firestore
 
-  Future<bool> login(String email, String password) async {
-    if (email.isEmpty || password.isEmpty) {
-      error = 'කරුණාකර ඊමේල් ලිපිනය සහ මුරපදය ඇතුළත් කරන්න.';
+  Future<bool> login(String loginId, String password) async {
+    if (loginId.isEmpty || password.isEmpty) {
+      error = 'Please enter your Email/NIC and Password.';
       notifyListeners();
       return false;
     }
@@ -23,11 +24,35 @@ class LoginViewModel extends ChangeNotifier {
     isLoading = true;
     error = null;
     user = null;
+    userRole = null;
     notifyListeners();
 
     try {
+      String loginEmail = loginId;
+
+      // Check if the input is an NIC (assuming NIC does not contain '@')
+      if (!loginId.contains('@')) {
+        // Find the user document by NIC in Firestore
+        final userQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('nic', isEqualTo: loginId)
+            .limit(1)
+            .get();
+
+        if (userQuery.docs.isEmpty) {
+          error = 'No account found for this NIC.';
+          isLoading = false;
+          notifyListeners();
+          return false;
+        }
+
+        // Retrieve the corresponding email for this NIC
+        loginEmail = userQuery.docs.first.data()['email'];
+      }
+
+      // Proceed to authenticate with FirebaseAuth using the resolved email
       final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
+        email: loginEmail,
         password: password,
       );
 
@@ -36,32 +61,40 @@ class LoginViewModel extends ChangeNotifier {
         throw AppException('Login failed, user not found.');
       }
 
+      // Fetch the full user details from Firestore
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(firebaseUser.uid)
           .get();
 
-      if (!userDoc.exists) {
+      if (!userDoc.exists || userDoc.data() == null) {
         await FirebaseAuth.instance.signOut();
         throw AppException('No user record found. Access denied.');
       }
 
-      user = AppUser.fromMap(firebaseUser.uid, userDoc.data()!);
+      final data = userDoc.data()!;
+      
+      // EXPLICITLY grab the 'role' directly from the Firestore document data
+      userRole = data['role']?.toString(); 
+
+      // Parse Firestore data into the AppUser model
+      user = AppUser.fromMap(firebaseUser.uid, data);
       return true;
+      
     } on FirebaseAuthException catch (e, stackTrace) {
       debugPrint('FirebaseAuthException during login: ${e.code}\n$stackTrace');
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential') {
-        error = 'ඔබ ඇතුළත් කළ ඊමේල් ලිපිනය හෝ මුරපදය වැරදියි.';
+        error = 'Invalid credentials provided.';
       } else {
-        error = 'දෝෂයක් මතු විය: ${e.message ?? e.code}';
+        error = 'An error occurred: ${e.message ?? e.code}';
       }
       return false;
     } catch (e, stackTrace) {
       debugPrint('Generic error during login: $e');
       debugPrint(stackTrace.toString());
-      error = 'ලොග් වීමේදී දෝෂයක් මතු විය.';
+      error = 'An error occurred during login.';
       return false;
     } finally {
       isLoading = false;

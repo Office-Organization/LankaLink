@@ -3,7 +3,7 @@ import 'package:lankalink/core/admin_dashboard_screen.dart';
 import 'package:lankalink/screens/auth/login_view_model.dart';
 import 'package:provider/provider.dart';
 import 'signup_screen.dart';
-import '../dashboard/dashboard_screen.dart'; // අලුතින් සෑදූ Dashboard එක Import කිරීම
+import '../dashboard/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -13,14 +13,14 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _loginIdController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _loginIdController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -28,28 +28,34 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loginUser() async {
     final vm = context.read<LoginViewModel>();
     final success = await vm.login(
-      _emailController.text.trim(),
+      _loginIdController.text.trim(),
       _passwordController.text.trim(),
     );
 
     if (mounted) {
       if (success) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('ඔබ සාර්ථකව ලොග් විය!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Login Successful!')),
+        );
 
-        final page = vm.user!.isAdmin
-            ? const AdminDashboardScreen()
-            : const DashboardScreen();
+        Widget page;
+
+        // Check the explicit role we grabbed directly from Firestore data
+        if (vm.userRole == 'admin') {
+          page = const AdminDashboardScreen();
+        } else {
+          // If role is 'data collector' or anything else, route to standard dashboard
+          page = const DashboardScreen(); 
+        }
 
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => page),
           (route) => false,
         );
       } else if (vm.error != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(vm.error!)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(vm.error!)),
+        );
       }
     }
   }
@@ -89,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 60),
               const Text(
-                'ඔබගේ ඊමේල් ලිපිනය ඇතුලත් කරන්න',
+                'ඊමේල් ලිපිනය හෝ ජාතික හැඳුනුම්පත් අංකය',
                 style: TextStyle(
                   fontFamily: 'UNSamantha',
                   fontSize: 14,
@@ -98,15 +104,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 8),
               TextField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
+                controller: _loginIdController,
+                keyboardType: TextInputType.text,
                 decoration: InputDecoration(
-                  hintText: 'ඊමේල් ලිපිනය',
+                  hintText: 'Email / NIC',
                   hintStyle: TextStyle(color: Colors.grey.shade400),
                   filled: true,
                   fillColor: Colors.grey.shade100,
                   suffixIcon: Icon(
-                    Icons.email_outlined,
+                    Icons.person_outline,
                     color: Colors.blue.shade300,
                   ),
                   border: OutlineInputBorder(
