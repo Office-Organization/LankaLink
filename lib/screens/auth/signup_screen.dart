@@ -10,7 +10,6 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
-  // දත්ත ලබාගැනීමට අවශ්‍ය Controllers
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _nicController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -21,9 +20,8 @@ class _SignupScreenState extends State<SignupScreen> {
 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-  bool _isLoading = false; // Loading තත්වය පෙන්වීමට
+  bool _isLoading = false;
 
-  // Firebase වෙත දත්ත යැවීමේ Function එක
   Future<void> _signUpUser() async {
     String name = _nameController.text.trim();
     String nic = _nicController.text.trim();
@@ -32,7 +30,6 @@ class _SignupScreenState extends State<SignupScreen> {
     String password = _passwordController.text.trim();
     String confirmPassword = _confirmPasswordController.text.trim();
 
-    // 1. දත්ත සියල්ල පුරවා ඇත්දැයි පරීක්ෂා කිරීම
     if (name.isEmpty ||
         nic.isEmpty ||
         email.isEmpty ||
@@ -44,7 +41,6 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
-    // 2. මුරපද දෙකම සමාන දැයි පරීක්ෂා කිරීම
     if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('ඔබ ඇතුළත් කළ මුරපදයන් නොගැලපේ.')),
@@ -53,15 +49,13 @@ class _SignupScreenState extends State<SignupScreen> {
     }
 
     setState(() {
-      _isLoading = true; // Loading ආරම්භ කිරීම
+      _isLoading = true;
     });
 
     try {
-      // 3. Firebase Authentication හරහා ගිණුම සෑදීම
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // 4. Firestore Database එකට අමතර දත්ත (නම, NIC, Phone) සේව් කිරීම
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
@@ -71,10 +65,10 @@ class _SignupScreenState extends State<SignupScreen> {
             'nic': nic,
             'email': email,
             'phone': phone,
+            'role': 'data collector',
             'createdAt': DateTime.now(),
           });
 
-      // 5. සාර්ථක වූ පසු පණිවිඩයක් පෙන්වා Login තිරයට යාම
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -83,11 +77,11 @@ class _SignupScreenState extends State<SignupScreen> {
         );
         Navigator.pop(context);
       }
-    } on FirebaseAuthException catch (e) {
-      // Firebase වලින් එන දෝෂ (උදා: Email එක දැනටමත් භාවිතා කර ඇත්නම්) පෙන්වීම
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('FirebaseAuthException during signup: ${e.code}\n$stackTrace');
       String errorMessage = 'දෝෂයක් මතු විය.';
       if (e.code == 'weak-password') {
-        errorMessage = 'මුරපදය ඉතා දුර්වලයි (අවම අකුරු/ඉලක්කම් 6ක් අවශ්‍යයි).';
+        errorMessage = 'මුරපදය ඉතා දුර්වලයි (අවම අකුරු/ඉලක්කම් 6ක් අවශ්යයි).';
       } else if (e.code == 'email-already-in-use') {
         errorMessage = 'මෙම Email ලිපිනය දැනටමත් ලියාපදිංචි කර ඇත.';
       } else if (e.code == 'invalid-email') {
@@ -99,22 +93,24 @@ class _SignupScreenState extends State<SignupScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Generic error during signup: $e\n$stackTrace');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(e.toString())));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('ලියාපදිංචි වීමේදී අනපේක්ෂිත දෝෂයක් මතු විය.'),
+          ),
+        );
       }
     } finally {
       if (mounted) {
         setState(() {
-          _isLoading = false; // Loading අවසන් කිරීම
+          _isLoading = false;
         });
       }
     }
   }
 
-  // නැවත නැවත භාවිත කළ හැකි (Reusable) Text Field එකක් සෑදීම
   Widget _buildTextField(
     String label,
     String hint,
@@ -250,7 +246,6 @@ class _SignupScreenState extends State<SignupScreen> {
 
               const SizedBox(height: 24),
 
-              // Sign Up Button එක
               Container(
                 height: 55,
                 decoration: BoxDecoration(
@@ -269,17 +264,14 @@ class _SignupScreenState extends State<SignupScreen> {
                   ],
                 ),
                 child: ElevatedButton(
-                  onPressed: _isLoading
-                      ? null
-                      : _signUpUser, // Loading වන විට Button එක ඔබන්න බැරි කිරීම
+                  onPressed: _isLoading ? null : _signUpUser,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.transparent,
                     shadowColor: Colors.transparent,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
-                    disabledBackgroundColor:
-                        Colors.grey.shade400, // Disable වූ විට වර්ණය
+                    disabledBackgroundColor: Colors.grey.shade400,
                   ),
                   child: _isLoading
                       ? const SizedBox(
@@ -309,10 +301,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 children: [
                   const Text(
                     'ගිණුමක් සාදා තිබේද? ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black87,
-                    ),
+                    style: TextStyle(fontSize: 12, color: Colors.black87),
                   ),
                   GestureDetector(
                     onTap: () {
