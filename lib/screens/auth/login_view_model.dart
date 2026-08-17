@@ -12,7 +12,6 @@ class LoginViewModel extends ChangeNotifier {
   bool isLoading = false;
   String? error;
   AppUser? user;
-  String? userRole; // Added to temporarily hold the role directly from Firestore
 
   Future<bool> login(String loginId, String password) async {
     if (loginId.isEmpty || password.isEmpty) {
@@ -24,7 +23,6 @@ class LoginViewModel extends ChangeNotifier {
     isLoading = true;
     error = null;
     user = null;
-    userRole = null;
     notifyListeners();
 
     try {
@@ -73,14 +71,10 @@ class LoginViewModel extends ChangeNotifier {
       }
 
       final data = userDoc.data()!;
-      
-      // EXPLICITLY grab the 'role' directly from the Firestore document data
-      userRole = data['role']?.toString(); 
 
       // Parse Firestore data into the AppUser model
       user = AppUser.fromMap(firebaseUser.uid, data);
       return true;
-      
     } on FirebaseAuthException catch (e, stackTrace) {
       debugPrint('FirebaseAuthException during login: ${e.code}\n$stackTrace');
       if (e.code == 'user-not-found' ||

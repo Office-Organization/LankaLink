@@ -7,9 +7,8 @@ import 'data/survey_repository.dart';
 import 'data/voter_repository.dart';
 import 'core/admin_login_screen.dart';
 import 'core/admin_signup_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'screens/auth/login_view_model.dart';
 import 'screens/auth/signup_screen.dart';
+import 'screens/auth/auth_gate.dart';
 import 'screens/dashboard/dashboard_screen.dart';
 import 'screens/survey/survey_screen.dart';
 import 'screens/survey/survey_view_model.dart';
@@ -20,10 +19,10 @@ import 'screens/housing/housing_screen.dart';
 import 'screens/housing/housing_view_model.dart';
 import 'screens/income/income_screen.dart';
 import 'screens/income/income_view_model.dart';
-import 'screens/assets/assets_main_screen.dart'; // 🔥 අලුත්
-import 'screens/assets/immovable_assets_screen.dart'; // 🔥 අලුත්
-import 'screens/assets/movable_assets_screen.dart'; // 🔥 අලුත්
-import 'screens/assets/assets_view_model.dart'; // 🔥 අලුත්
+import 'screens/assets/assets_main_screen.dart';
+import 'screens/assets/immovable_assets_screen.dart';
+import 'screens/assets/movable_assets_screen.dart';
+import 'screens/assets/assets_view_model.dart';
 
 class LankaLinkApp extends StatelessWidget {
   const LankaLinkApp({super.key});
@@ -45,7 +44,6 @@ class LankaLinkApp extends StatelessWidget {
         ),
         child: const SurveyScreen(),
       ),
-
       Routes.basicDetails: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         final houseNumber = args is String ? args : '';
@@ -55,7 +53,6 @@ class LankaLinkApp extends StatelessWidget {
           child: const BasicDetailsScreen(),
         );
       },
-
       Routes.housing: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         final houseNumber = args is String ? args : '';
@@ -65,7 +62,6 @@ class LankaLinkApp extends StatelessWidget {
           child: const HousingScreen(),
         );
       },
-
       Routes.income: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         final houseNumber = args is String ? args : '';
@@ -75,8 +71,6 @@ class LankaLinkApp extends StatelessWidget {
           child: const IncomeScreen(),
         );
       },
-
-      // 🔥 Assets Main
       Routes.assetsMain: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         final houseNumber = args is String ? args : '';
@@ -86,8 +80,6 @@ class LankaLinkApp extends StatelessWidget {
           child: const AssetsMainScreen(),
         );
       },
-
-      // 🔥 Assets Immovable
       Routes.assetsImmovable: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         final houseNumber = args is String ? args : '';
@@ -97,8 +89,6 @@ class LankaLinkApp extends StatelessWidget {
           child: const ImmovableAssetsScreen(),
         );
       },
-
-      // 🔥 Assets Movable
       Routes.assetsMovable: (context) {
         final args = ModalRoute.of(context)?.settings.arguments;
         final houseNumber = args is String ? args : '';
@@ -108,30 +98,7 @@ class LankaLinkApp extends StatelessWidget {
           child: const MovableAssetsScreen(),
         );
       },
-
       Routes.gn: (_) => const GnDetailsScreen(),
     },
   );
-}
-
-class AuthGate extends StatelessWidget {
-  const AuthGate({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final auth = context.watch<AuthRepository>();
-
-    if (auth.isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (!auth.isSignedIn) {
-      return ChangeNotifierProvider(
-        create: (c) => LoginViewModel(c.read<AuthRepository>()),
-        child: const LoginScreen(),
-      );
-    }
-
-    return const DashboardScreen();
-  }
 }

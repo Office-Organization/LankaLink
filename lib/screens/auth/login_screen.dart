@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:lankalink/core/admin_dashboard_screen.dart';
 import 'package:lankalink/screens/auth/login_view_model.dart';
 import 'package:provider/provider.dart';
 import 'signup_screen.dart';
-import '../dashboard/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,31 +30,12 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text.trim(),
     );
 
-    if (mounted) {
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login Successful!')),
-        );
-
-        Widget page;
-
-        // Check the explicit role we grabbed directly from Firestore data
-        if (vm.userRole == 'admin') {
-          page = const AdminDashboardScreen();
-        } else {
-          // If role is 'data collector' or anything else, route to standard dashboard
-          page = const DashboardScreen(); 
-        }
-
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => page),
-          (route) => false,
-        );
-      } else if (vm.error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(vm.error!)),
-        );
-      }
+    // On success, the AuthGate will handle navigation automatically because of the auth state change.
+    // We only need to handle the error case here.
+    if (mounted && !success && vm.error != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(vm.error!)));
     }
   }
 

@@ -1,11 +1,12 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-// Import your screens properly based on your folder structure
-import 'package:lankalink/screens/auth/login_screen.dart';
 import 'package:lankalink/core/admin_dashboard_screen.dart';
+import 'package:lankalink/data/auth_repository.dart';
+import 'package:lankalink/screens/auth/login_screen.dart';
+import 'package:lankalink/screens/auth/login_view_model.dart';
 import 'package:lankalink/screens/dashboard/dashboard_screen.dart';
+import 'package:provider/provider.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -25,7 +26,10 @@ class AuthGate extends StatelessWidget {
 
         // 2. If the user is NOT logged in, send them to the Login Screen
         if (!snapshot.hasData || snapshot.data == null) {
-          return const LoginScreen();
+          return ChangeNotifierProvider(
+            create: (c) => LoginViewModel(c.read<AuthRepository>()),
+            child: const LoginScreen(),
+          );
         }
 
         // 3. If the user IS logged in, fetch their role from Firestore to route them correctly
@@ -49,14 +53,15 @@ class AuthGate extends StatelessWidget {
 
               if (role == 'admin') {
                 return const AdminDashboardScreen();
-              } else {
-                return const DashboardScreen(); // Default Data Collector Dashboard
               }
+              return const DashboardScreen(); // Default for 'data collector' or other roles
             }
 
-            // 4. Fallback: If the user doc doesn't exist for some reason, log them out and go to Login
+            // 4. Fallback: If user doc doesn't exist, sign out. The stream will rebuild and show LoginScreen.
             FirebaseAuth.instance.signOut();
-            return const LoginScreen();
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           },
         );
       },

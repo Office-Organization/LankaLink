@@ -10,31 +10,29 @@ import 'data/survey_repository.dart';
 import 'data/voter_repository.dart';
 
 void main() async {
-  // Ensure Flutter binding is initialized before starting Firebase
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   final db = FirebaseFirestore.instance;
   final auth = FirebaseAuth.instance;
+
+  // Force Firebase to NOT save the session. 
+  // This ensures a page refresh will clear the login and send them to the login screen.
+  await auth.setPersistence(Persistence.NONE);
 
   // Enable Firestore Offline Persistence
   try {
     await db.enableNetwork();
     db.settings = const Settings(persistenceEnabled: true);
   } catch (e) {
-    // Offline persistence error - app will still work with network
+    debugPrint("Offline persistence error: $e");
   }
 
   runApp(
     MultiProvider(
       providers: [
-        // Provide AuthRepository to the entire app
         ChangeNotifierProvider(create: (_) => AuthRepository(auth, db)),
-        // Provide SurveyRepository to the entire app
         Provider(create: (_) => SurveyRepository(db)),
-        // Provide VoterRepository to the entire app
         Provider(create: (_) => VoterRepository(db)),
       ],
       child: const LankaLinkApp(),
