@@ -48,16 +48,19 @@ class LoginViewModel extends ChangeNotifier {
 
       user = AppUser.fromMap(firebaseUser.uid, userDoc.data()!);
       return true;
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('FirebaseAuthException during login: ${e.code}\n$stackTrace');
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential') {
         error = 'ඔබ ඇතුළත් කළ ඊමේල් ලිපිනය හෝ මුරපදය වැරදියි.';
       } else {
-        error = 'දෝෂයක් මතු විය: ${e.message}';
+        error = 'දෝෂයක් මතු විය: ${e.message ?? e.code}';
       }
       return false;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Generic error during login: $e');
+      debugPrint(stackTrace.toString());
       error = 'ලොග් වීමේදී දෝෂයක් මතු විය.';
       return false;
     } finally {

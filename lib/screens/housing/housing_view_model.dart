@@ -26,8 +26,10 @@ class HousingViewModel extends ChangeNotifier {
       if (fetchedDetails != null) {
         details = fetchedDetails; 
       }
-    } catch (e) {
-      error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය.';
+    } catch (e, stackTrace) {
+      debugPrint('Failed to load housing details: $e');
+      debugPrint(stackTrace.toString());
+      error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය: $e';
     } finally {
       isBusy = false; 
       notifyListeners();
@@ -53,7 +55,9 @@ class HousingViewModel extends ChangeNotifier {
     try {
       await _repository.saveHousingDetails(houseNumber, details);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Failed to save housing details: $e');
+      debugPrint(stackTrace.toString());
       error = 'දෝෂය: ${e.toString()}';
       return false;
     } finally {

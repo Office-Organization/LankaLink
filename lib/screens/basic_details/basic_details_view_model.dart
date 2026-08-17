@@ -22,8 +22,10 @@ class BasicDetailsViewModel extends ChangeNotifier {
       if (fetchedDetails != null) {
         details = fetchedDetails;
       }
-    } catch (e) {
-      error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය.';
+    } catch (e, stackTrace) {
+      debugPrint('Failed to load basic details: $e');
+      debugPrint(stackTrace.toString());
+      error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය: $e';
     } finally {
       isBusy = false;
       notifyListeners();
@@ -110,7 +112,8 @@ class BasicDetailsViewModel extends ChangeNotifier {
         age--;
       }
       return age;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Error parsing date for age calculation: $e\n$stackTrace');
       return 0;
     }
   }
@@ -137,7 +140,9 @@ class BasicDetailsViewModel extends ChangeNotifier {
     try {
       await _repository.saveBasicDetails(houseNumber, details);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Failed to save basic details: $e');
+      debugPrint(stackTrace.toString());
       error = 'දෝෂය: ${e.toString()}';
       return false;
     } finally {

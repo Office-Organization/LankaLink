@@ -26,8 +26,10 @@ class IncomeViewModel extends ChangeNotifier {
       if (fetchedDetails != null) {
         details = fetchedDetails;
       }
-    } catch (e) {
-      error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය.';
+    } catch (e, stackTrace) {
+      debugPrint('Failed to load income details: $e');
+      debugPrint(stackTrace.toString());
+      error = 'දත්ත ලබා ගැනීමේදී දෝෂයක් මතු විය: $e';
     } finally {
       isBusy = false;
       notifyListeners();
@@ -94,7 +96,9 @@ class IncomeViewModel extends ChangeNotifier {
       await _repository.saveIncomeDetails(houseNumber, cleanedDetails);
       details = cleanedDetails;
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('Failed to save income details: $e');
+      debugPrint(stackTrace.toString());
       error = 'දෝෂය: ${e.toString()}';
       return false;
     } finally {

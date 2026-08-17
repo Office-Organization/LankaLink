@@ -24,8 +24,13 @@ class AuthRepository extends ChangeNotifier {
     if (firebaseUser == null) {
       user = null;
     } else {
-      final doc = await _db.collection(Db.users).doc(firebaseUser.uid).get();
-      user = doc.exists ? AppUser.fromMap(doc.id, doc.data()!) : null;
+      try {
+        final doc = await _db.collection(Db.users).doc(firebaseUser.uid).get();
+        user = doc.exists ? AppUser.fromMap(doc.id, doc.data()!) : null;
+      } catch (e, stackTrace) {
+        debugPrint('Failed to fetch user details on auth change: $e\n$stackTrace');
+        user = null; // Ensure user is null on error
+      }
     }
     isLoading = false;
     notifyListeners(); // AuthGate වෙත යාවත්කාලීන කිරීම් යවයි
@@ -40,7 +45,8 @@ class AuthRepository extends ChangeNotifier {
 
       final email = found.docs.first.data()['email'] as String? ?? '';
       await _auth.signInWithEmailAndPassword(email: email, password: password);
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException catch (e, stackTrace) {
+      debugPrint('FirebaseAuthException in signInWithNic: ${e.code}\n$stackTrace');
       throw _translate(e); 
     }
   }
