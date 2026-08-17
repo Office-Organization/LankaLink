@@ -1,0 +1,50 @@
+name: lankalink
+description: "A digital Sri Lanka application for the National Data Network."
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.12.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  google_fonts: ^8.2.1
+  firebase_core: ^4.13.0
+  firebase_auth: ^6.5.7
+  cloud_firestore: ^6.8.0
+  provider: ^6.1.5+1
+  uuid: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: UNSamantha
+      fonts:
+        - asset: assets/fonts/UN-Samantha.ttf
+    - family: UNGanganee
+      fonts:
+        - asset: assets/fonts/UN-Ganganee.ttf
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/applogo.png"
+  web:
+    generate: true
+  windows:
+    generate: true
