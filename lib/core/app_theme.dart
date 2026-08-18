@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 abstract final class AppColors {
   // Lanka Link logo primary color (Deep Magenta)
-  static const primary = Color.fromARGB(199, 16, 1, 226);
+  static const primary = Color.fromARGB(235, 139, 3, 73);
   static const secondary = Color(0xFF56B4F8);
   static const accent = Color(0xFFFF5722);
 

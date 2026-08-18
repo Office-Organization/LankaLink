@@ -5,10 +5,18 @@ import '../../core/app_constants.dart';
 import 'basic_details_view_model.dart';
 import 'add_child_dialog.dart';
 import 'add_other_member_dialog.dart';
-import '../../models/basic_details.dart' show OtherMemberInfo, ChildInfo;
+import '../../models/basic_details.dart' show OtherMemberInfo, ChildInfo, BasicDetails;
 
-class BasicDetailsScreen extends StatelessWidget {
+class BasicDetailsScreen extends StatefulWidget {
   const BasicDetailsScreen({super.key});
+
+  @override
+  State<BasicDetailsScreen> createState() => _BasicDetailsScreenState();
+}
+
+class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
+  // මූලික තොරතුරු සංස්කරණය කරනවාද යන්න තීරණය කරන State variable එක
+  bool _isEditingPersonalInfo = false;
 
   @override
   Widget build(BuildContext context) {
@@ -66,147 +74,16 @@ class BasicDetailsScreen extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
 
-                  _buildLabel('ගෘහ මූලිකත්වය'),
-                  Row(
-                    children: [
-                      const Text(
-                        'පිරිමි',
-                        style: TextStyle(fontFamily: 'UNGanganee'),
-                      ),
-                      Checkbox(
-                        value: details.headGender == 'පිරිමි',
-                        activeColor: AppColors.primary,
-                        onChanged: (val) =>
-                            vm.updateField(headGender: 'පිරිමි'),
-                      ),
-                      const SizedBox(width: 16),
-                      const Text(
-                        'කාන්තා',
-                        style: TextStyle(fontFamily: 'UNGanganee'),
-                      ),
-                      Checkbox(
-                        value: details.headGender == 'කාන්තා',
-                        activeColor: AppColors.primary,
-                        onChanged: (val) =>
-                            vm.updateField(headGender: 'කාන්තා'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  // නව View/Edit ලොජික් එක ඇතුළත් කළ මූලික තොරතුරු කොටස
+                  _buildPersonalInfoSection(details, vm),
 
-                  _buildLabel('ගෘහ මූලිකයාගේ නම'),
-                  TextFormField(
-                    initialValue: details.headName,
-                    onChanged: (val) => vm.updateField(headName: val),
-                    decoration: const InputDecoration(
-                      hintText: 'නම ඇතුළත් කරන්න',
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildLabel('ජාතික හැඳුනුම්පත් අංකය'),
-                  TextFormField(
-                    initialValue: details.nic,
-                    onChanged: (val) => vm.updateField(nic: val),
-                    decoration: const InputDecoration(hintText: 'NIC අංකය'),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildLabel('උපන් දිනය'),
-                  GestureDetector(
-                    onTap: () async {
-                      final selectedDate = await showDatePicker(
-                        context: context,
-                        initialDate: details.dob.isNotEmpty
-                            ? DateTime.tryParse(details.dob) ?? DateTime.now()
-                            : DateTime.now(),
-                        firstDate: DateTime(1950),
-                        lastDate: DateTime.now(),
-                      );
-                      if (selectedDate != null) {
-                        // Formats date into standard YYYY-MM-DD
-                        final formattedDate =
-                            '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-                        vm.updateField(dob: formattedDate);
-                      }
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: AppColors.textDisabled),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            details.dob.isNotEmpty
-                                ? details.dob
-                                : 'උපන් දිනය තෝරන්න',
-                            style: TextStyle(
-                              fontFamily: 'UNGanganee',
-                              color: details.dob.isEmpty
-                                  ? AppColors.textDisabled
-                                  : AppColors.textSecondary,
-                            ),
-                          ),
-                          const Icon(
-                            Icons.calendar_today,
-                            color: AppColors.info,
-                            size: 20,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildLabel('දුරකථන අංකය'),
-                  TextFormField(
-                    initialValue: details.phone,
-                    onChanged: (val) => vm.updateField(phone: val),
-                    keyboardType: TextInputType.phone,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildLabel('ඊමේල් ලිපිනය'),
-                  TextFormField(
-                    initialValue: details.email,
-                    onChanged: (val) => vm.updateField(email: val),
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 16),
-
-                  _buildLabel('ජාතිය'),
-                  DropdownButtonFormField<String>(
-                    initialValue: details.nationality,
-                    decoration: const InputDecoration(
-                      filled: true,
-                      fillColor: AppColors.fieldFill,
-                    ),
-                    items: ['සිංහල', 'දෙමළ', 'මුස්ලිම්'].map((String val) {
-                      return DropdownMenuItem(
-                        value: val,
-                        child: Text(
-                          val,
-                          style: const TextStyle(fontFamily: 'UNGanganee'),
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) => vm.updateField(nationality: val),
-                  ),
                   const SizedBox(height: 32),
 
                   // Section: Manage children details (under 18 years of age)
                   Theme(
-                    data: Theme.of(
-                      context,
-                    ).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       title: const Text(
                         'වයස අවුරුදු (18) ට අඩු දරුවන් පිළිබඳ විස්තර',
@@ -237,28 +114,19 @@ class BasicDetailsScreen extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: AppColors.info,
-                                  ),
+                                  icon: const Icon(Icons.edit, color: AppColors.info),
                                   onPressed: () async {
-                                    final updatedChild =
-                                        await showDialog<ChildInfo>(
-                                          context: context,
-                                          builder: (_) => AddChildDialog(
-                                            existingChild: child,
-                                          ),
-                                        );
+                                    final updatedChild = await showDialog<ChildInfo>(
+                                      context: context,
+                                      builder: (_) => AddChildDialog(existingChild: child),
+                                    );
                                     if (updatedChild != null) {
                                       vm.updateChild(updatedChild);
                                     }
                                   },
                                 ),
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: AppColors.danger,
-                                  ),
+                                  icon: const Icon(Icons.delete, color: AppColors.danger),
                                   onPressed: () => vm.removeChild(child.id),
                                 ),
                               ],
@@ -300,9 +168,7 @@ class BasicDetailsScreen extends StatelessWidget {
 
                   // Section: Manage other adult family members (over 18 years of age)
                   Theme(
-                    data: Theme.of(
-                      context,
-                    ).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       title: const Text(
                         'වෙනත් පවුලේ සාමාජිකයන් (අවු: 18 ට වැඩි)',
@@ -333,30 +199,20 @@ class BasicDetailsScreen extends StatelessWidget {
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: AppColors.info,
-                                  ),
+                                  icon: const Icon(Icons.edit, color: AppColors.info),
                                   onPressed: () async {
-                                    final updatedMember =
-                                        await showDialog<OtherMemberInfo>(
-                                          context: context,
-                                          builder: (_) => AddOtherMemberDialog(
-                                            existingMember: member,
-                                          ),
-                                        );
+                                    final updatedMember = await showDialog<OtherMemberInfo>(
+                                      context: context,
+                                      builder: (_) => AddOtherMemberDialog(existingMember: member),
+                                    );
                                     if (updatedMember != null) {
                                       vm.updateOtherMember(updatedMember);
                                     }
                                   },
                                 ),
                                 IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: AppColors.danger,
-                                  ),
-                                  onPressed: () =>
-                                      vm.removeOtherMember(member.id),
+                                  icon: const Icon(Icons.delete, color: AppColors.danger),
+                                  onPressed: () => vm.removeOtherMember(member.id),
                                 ),
                               ],
                             ),
@@ -373,12 +229,10 @@ class BasicDetailsScreen extends StatelessWidget {
                               ),
                             ),
                             onPressed: () async {
-                              final newMember =
-                                  await showDialog<OtherMemberInfo>(
-                                    context: context,
-                                    builder: (_) =>
-                                        const AddOtherMemberDialog(),
-                                  );
+                              final newMember = await showDialog<OtherMemberInfo>(
+                                context: context,
+                                builder: (_) => const AddOtherMemberDialog(),
+                              );
                               if (newMember != null) {
                                 vm.addOtherMember(newMember);
                               }
@@ -400,37 +254,27 @@ class BasicDetailsScreen extends StatelessWidget {
                   _buildLabel('සමාජ විරෝධී ක්‍රියාකාරකම් සිදු කර ඇත්ද?'),
                   Row(
                     children: [
-                      const Text(
-                        'ඇත',
-                        style: TextStyle(fontFamily: 'UNGanganee'),
-                      ),
+                      const Text('ඇත', style: TextStyle(fontFamily: 'UNGanganee')),
                       Checkbox(
                         value: details.hasAntiSocialActivities,
                         activeColor: AppColors.primary,
-                        onChanged: (val) =>
-                            vm.updateField(hasAntiSocialActivities: true),
+                        onChanged: (val) => vm.updateField(hasAntiSocialActivities: true),
                       ),
                       const SizedBox(width: 16),
-                      const Text(
-                        'නැත',
-                        style: TextStyle(fontFamily: 'UNGanganee'),
-                      ),
+                      const Text('නැත', style: TextStyle(fontFamily: 'UNGanganee')),
                       Checkbox(
                         value: !details.hasAntiSocialActivities,
                         activeColor: AppColors.primary,
-                        onChanged: (val) =>
-                            vm.updateField(hasAntiSocialActivities: false),
+                        onChanged: (val) => vm.updateField(hasAntiSocialActivities: false),
                       ),
                     ],
                   ),
-                  // Text input for anti-social activities description if checked 'yes'
                   if (details.hasAntiSocialActivities) ...[
                     const SizedBox(height: 8),
                     TextFormField(
                       initialValue: details.antiSocialDescription,
                       maxLines: 4,
-                      onChanged: (val) =>
-                          vm.updateField(antiSocialDescription: val),
+                      onChanged: (val) => vm.updateField(antiSocialDescription: val),
                       decoration: const InputDecoration(
                         hintText: 'විස්තරය මෙහි ලියන්න...',
                       ),
@@ -455,15 +299,9 @@ class BasicDetailsScreen extends StatelessWidget {
                           final success = await vm.save();
                           if (success && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('දත්ත සාර්ථකව සුරැකිණි!'),
-                              ),
+                              const SnackBar(content: Text('දත්ත සාර්ථකව සුරැකිණි!')),
                             );
-                            Navigator.pushNamed(
-                              context,
-                              Routes.housing,
-                              arguments: vm.houseNumber,
-                            );
+                            Navigator.pushNamed(context, Routes.housing, arguments: vm.houseNumber);
                           }
                         },
                         child: const Text(
@@ -481,6 +319,187 @@ class BasicDetailsScreen extends StatelessWidget {
                 ],
               ),
             ),
+    );
+  }
+
+  // View Mode සහ Edit Mode පාලනය කරන ප්‍රධාන කොටස
+  Widget _buildPersonalInfoSection(BasicDetails details, BasicDetailsViewModel vm) {
+    // දත්ත දැනටමත් ඇතුළත් කර ඇත්දැයි බැලීම
+    final hasData = details.headName.isNotEmpty || details.nic.isNotEmpty || details.phone.isNotEmpty;
+
+    // View Mode (දත්ත පෙන්වන කොටුව)
+    if (hasData && !_isEditingPersonalInfo) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.fieldFill,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'ගෘහ මූලිකයාගේ විස්තර',
+                  style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                  onPressed: () => setState(() => _isEditingPersonalInfo = true),
+                ),
+              ],
+            ),
+            const Divider(),
+            _buildViewRow('නම:', details.headName),
+            _buildViewRow('ස්ත්‍රී/පුරුෂ භාවය:', details.headGender),
+            _buildViewRow('ජා.හැ. අංකය:', details.nic),
+            _buildViewRow('උපන් දිනය:', details.dob),
+            _buildViewRow('දුරකථන:', details.phone),
+            _buildViewRow('ඊමේල්:', details.email),
+            _buildViewRow('ජාතිය:', details.nationality),
+          ],
+        ),
+      );
+    }
+
+    // Edit Mode (දත්ත වෙනස් කරන TextFields)
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'ගෘහ මූලිකයාගේ විස්තර ඇතුළත් කරන්න',
+              style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            if (hasData)
+              IconButton(
+                icon: const Icon(Icons.check, color: Colors.green, size: 24),
+                onPressed: () => setState(() => _isEditingPersonalInfo = false),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('ගෘහ මූලිකත්වය'),
+        Row(
+          children: [
+            const Text('පිරිමි', style: TextStyle(fontFamily: 'UNGanganee')),
+            Checkbox(
+              value: details.headGender == 'පිරිමි',
+              activeColor: AppColors.primary,
+              onChanged: (val) => vm.updateField(headGender: 'පිරිමි'),
+            ),
+            const SizedBox(width: 16),
+            const Text('කාන්තා', style: TextStyle(fontFamily: 'UNGanganee')),
+            Checkbox(
+              value: details.headGender == 'කාන්තා',
+              activeColor: AppColors.primary,
+              onChanged: (val) => vm.updateField(headGender: 'කාන්තා'),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('ගෘහ මූලිකයාගේ නම'),
+        TextFormField(
+          initialValue: details.headName,
+          onChanged: (val) => vm.updateField(headName: val),
+          decoration: const InputDecoration(hintText: 'නම ඇතුළත් කරන්න'),
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('ජාතික හැඳුනුම්පත් අංකය'),
+        TextFormField(
+          initialValue: details.nic,
+          onChanged: (val) => vm.updateField(nic: val),
+          decoration: const InputDecoration(hintText: 'NIC අංකය'),
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('උපන් දිනය'),
+        GestureDetector(
+          onTap: () async {
+            final selectedDate = await showDatePicker(
+              context: context,
+              initialDate: details.dob.isNotEmpty ? (DateTime.tryParse(details.dob) ?? DateTime.now()) : DateTime.now(),
+              firstDate: DateTime(1950),
+              lastDate: DateTime.now(),
+            );
+            if (selectedDate != null) {
+              final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+              vm.updateField(dob: formattedDate);
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: AppColors.textDisabled),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  details.dob.isNotEmpty ? details.dob : 'උපන් දිනය තෝරන්න',
+                  style: TextStyle(
+                    fontFamily: 'UNGanganee',
+                    color: details.dob.isEmpty ? AppColors.textDisabled : AppColors.textSecondary,
+                  ),
+                ),
+                const Icon(Icons.calendar_today, color: AppColors.info, size: 20),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('දුරකථන අංකය'),
+        TextFormField(
+          initialValue: details.phone,
+          onChanged: (val) => vm.updateField(phone: val),
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('ඊමේල් ලිපිනය'),
+        TextFormField(
+          initialValue: details.email,
+          onChanged: (val) => vm.updateField(email: val),
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        _buildLabel('ජාතිය'),
+        DropdownButtonFormField<String>(
+          initialValue: details.nationality,
+          decoration: const InputDecoration(filled: true, fillColor: AppColors.fieldFill),
+          items: ['සිංහල', 'දෙමළ', 'මුස්ලිම්'].map((String val) {
+            return DropdownMenuItem(
+              value: val,
+              child: Text(val, style: const TextStyle(fontFamily: 'UNGanganee')),
+            );
+          }).toList(),
+          onChanged: (val) => vm.updateField(nationality: val),
+        ),
+      ],
+    );
+  }
+
+  // View Mode එකේ පේළි පෙන්වීමට සරල Widget එකක්
+  Widget _buildViewRow(String label, String value) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          ),
+        ],
+      ),
     );
   }
 
