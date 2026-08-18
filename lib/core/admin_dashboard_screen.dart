@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import '../data/auth_repository.dart';
 import 'app_theme.dart';
 
 /// Admin dashboard for viewing and managing Firestore records.
@@ -402,6 +404,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.white),
+            tooltip: 'Sign Out',
+            onPressed: () {
+              // Use the repository to sign out. The AuthGate will handle redirecting.
+              context.read<AuthRepository>().signOut();
+            },
           ),
         ],
       ),
