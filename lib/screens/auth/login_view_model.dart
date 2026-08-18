@@ -26,14 +26,14 @@ class LoginViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      String loginEmail = loginId;
+      String loginEmail = loginId.trim();
 
       // Check if the input is an NIC (assuming NIC does not contain '@')
       if (!loginId.contains('@')) {
         // Find the user document by NIC in Firestore
         final userQuery = await FirebaseFirestore.instance
             .collection('users')
-            .where('nic', isEqualTo: loginId)
+            .where('nic', isEqualTo: loginId.trim())
             .limit(1)
             .get();
 
@@ -70,11 +70,36 @@ class LoginViewModel extends ChangeNotifier {
         throw AppException('No user record found. Access denied.');
       }
 
-      final data = userDoc.data()!;
+      // Create a mutable copy of the map
+      final Map<String, dynamic> data = Map<String, dynamic>.from(userDoc.data()!);
+
+      // FIX: Safely check if the user account is active.
+      // This prevents a crash if an Admin manually typed "true" (String) instead of true (Boolean) in Firebase.
+      final dynamic isActiveData = data['isActive'];
+      bool isActive = false;
+      
+      if (isActiveData is bool) {
+        isActive = isActiveData;
+      } else if (isActiveData != null) {
+        // Fallback for strings like "true", "True", etc.
+        isActive = isActiveData.toString().toLowerCase() == 'true';
+      }
+
+      if (!isActive) {
+        await FirebaseAuth.instance.signOut(); // Sign out the just-logged-in user
+        error = 'Your account is not active yet. Please contact the admin.'; 
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // Overwrite the map's isActive with a strict boolean just in case AppUser.fromMap expects a strict bool
+      data['isActive'] = isActive;
 
       // Parse Firestore data into the AppUser model
       user = AppUser.fromMap(firebaseUser.uid, data);
       return true;
+      
     } on FirebaseAuthException catch (e, stackTrace) {
       debugPrint('FirebaseAuthException during login: ${e.code}\n$stackTrace');
       if (e.code == 'user-not-found' ||
@@ -88,7 +113,8 @@ class LoginViewModel extends ChangeNotifier {
     } catch (e, stackTrace) {
       debugPrint('Generic error during login: $e');
       debugPrint(stackTrace.toString());
-      error = 'An error occurred during login.';
+      // FIX: Show the exact error on the screen to help debug if it fails again
+      error = 'Login Error: ${e.toString()}'; 
       return false;
     } finally {
       isLoading = false;

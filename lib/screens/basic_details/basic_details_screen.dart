@@ -43,6 +43,7 @@ class BasicDetailsScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Error message display area
                   if (vm.error != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -113,7 +114,7 @@ class BasicDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildLabel('මගං දිනය'),
+                  _buildLabel('උපන් දිනය'),
                   GestureDetector(
                     onTap: () async {
                       final selectedDate = await showDatePicker(
@@ -125,8 +126,9 @@ class BasicDetailsScreen extends StatelessWidget {
                         lastDate: DateTime.now(),
                       );
                       if (selectedDate != null) {
+                        // Formats date into standard YYYY-MM-DD
                         final formattedDate =
-                            'පිෂමග්: ${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+                            '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
                         vm.updateField(dob: formattedDate);
                       }
                     },
@@ -145,7 +147,7 @@ class BasicDetailsScreen extends StatelessWidget {
                           Text(
                             details.dob.isNotEmpty
                                 ? details.dob
-                                : 'මගණ අසොනැම කරන්න',
+                                : 'උපන් දිනය තෝරන්න',
                             style: TextStyle(
                               fontFamily: 'UNGanganee',
                               color: details.dob.isEmpty
@@ -172,7 +174,7 @@ class BasicDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildLabel('ඊ මේල්'),
+                  _buildLabel('ඊමේල් ලිපිනය'),
                   TextFormField(
                     initialValue: details.email,
                     onChanged: (val) => vm.updateField(email: val),
@@ -200,7 +202,7 @@ class BasicDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  // 🔥 ළමා සාමාජිකයන් (අවු: 18 ට අඩු)
+                  // Section: Manage children details (under 18 years of age)
                   Theme(
                     data: Theme.of(
                       context,
@@ -229,7 +231,7 @@ class BasicDetailsScreen extends StatelessWidget {
                               ),
                             ),
                             subtitle: Text(
-                              'මගණ: ${vm.getAge(child.dob)} පණන | ඉපන්දිනය: ${child.dob} | ${child.gender}',
+                              'වයස: අවුරුදු ${vm.getAge(child.dob)} | උපන් දිනය: ${child.dob} | ${child.gender}',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -296,7 +298,7 @@ class BasicDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  // 🔥 වෙනත් සාමාජිකයන් (අවු: 18 ට වැඩි)
+                  // Section: Manage other adult family members (over 18 years of age)
                   Theme(
                     data: Theme.of(
                       context,
@@ -325,7 +327,7 @@ class BasicDetailsScreen extends StatelessWidget {
                               ),
                             ),
                             subtitle: Text(
-                              'NIC: ${member.nic ?? '-'} | ${member.gender ?? '-'} | පණන: ${member.dateOfBirth != null && member.dateOfBirth!.isNotEmpty ? vm.getAge(member.dateOfBirth!).toString() : '-'}',
+                              'NIC: ${member.nic ?? '-'} | ${member.gender ?? '-'} | වයස: ${member.dateOfBirth != null && member.dateOfBirth!.isNotEmpty ? vm.getAge(member.dateOfBirth!).toString() : '-'}',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -395,7 +397,7 @@ class BasicDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 32),
 
-                  _buildLabel('සමාජ විරෝධී ක්‍රියාකාරකම් සිදු කර ඇත්ද නැත්ද'),
+                  _buildLabel('සමාජ විරෝධී ක්‍රියාකාරකම් සිදු කර ඇත්ද?'),
                   Row(
                     children: [
                       const Text(
@@ -421,6 +423,7 @@ class BasicDetailsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  // Text input for anti-social activities description if checked 'yes'
                   if (details.hasAntiSocialActivities) ...[
                     const SizedBox(height: 8),
                     TextFormField(
@@ -435,6 +438,7 @@ class BasicDetailsScreen extends StatelessWidget {
                   ],
                   const SizedBox(height: 40),
 
+                  // Submit Data Button
                   Center(
                     child: SizedBox(
                       width: 200,
@@ -480,6 +484,7 @@ class BasicDetailsScreen extends StatelessWidget {
     );
   }
 
+  // Helper widget to construct standard labels
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
