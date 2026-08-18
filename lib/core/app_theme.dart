@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 abstract final class AppColors {
   // Lanka Link logo primary color (Deep Magenta)
-  static const primary = Color.fromARGB(235, 139, 3, 73);
+  static const primary = Color.fromARGB(255, 168, 4, 99);
   static const secondary = Color(0xFF56B4F8);
   static const accent = Color(0xFFFF5722);
 
@@ -29,58 +29,75 @@ abstract final class AppColors {
 
 abstract final class AppTheme {
   static ThemeData get light => ThemeData(
-    useMaterial3: true,
-    colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary),
+        
+        // මුළු ඇප් එකේම පසුබිම සුදු කිරීම සඳහා
+        scaffoldBackgroundColor: AppColors.white,
 
-    // Define the default font family for the app
-    fontFamily: 'UNGanganee',
+        // මුළු ඇප් එකේම AppBar එක සඳහා වූ පොදු සැකසුම (සුදු පසුබිම, නිල් බොත්තම්, කළු අකුරු)
+        appBarTheme: const AppBarTheme(
+          backgroundColor: AppColors.white,
+          elevation: 0,
+          centerTitle: true,
+          iconTheme: IconThemeData(color: AppColors.lightBlue), // නිල් පාට Back Button එක
+          titleTextStyle: TextStyle(
+            fontFamily: 'UNSamantha',
+            color: AppColors.textPrimary,
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
 
-    // Define a custom text theme using your project's fonts
-    textTheme: const TextTheme(
-      displayLarge: TextStyle(
+        // Define the default font family for the app
         fontFamily: 'UNGanganee',
-        fontSize: 57,
-        fontWeight: FontWeight.bold,
-      ),
-      displayMedium: TextStyle(
-        fontFamily: 'UNGanganee',
-        fontSize: 45,
-        fontWeight: FontWeight.bold,
-      ),
-      displaySmall: TextStyle(
-        fontFamily: 'UNSamantha',
-        fontSize: 36,
-        fontWeight: FontWeight.bold,
-      ),
-      headlineLarge: TextStyle(
-        fontFamily: 'UNSamantha',
-        fontSize: 32,
-        fontWeight: FontWeight.bold,
-      ),
-      headlineMedium: TextStyle(
-        fontFamily: 'UNSamantha',
-        fontSize: 28,
-        fontWeight: FontWeight.bold,
-      ),
-      headlineSmall: TextStyle(
-        fontFamily: 'UNSamantha',
-        fontSize: 24,
-        fontWeight: FontWeight.bold,
-      ),
-      titleLarge: TextStyle(
-        fontFamily: 'UNSamantha',
-        fontSize: 22,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: AppColors.fieldFill,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-    ),
-  );
+
+        // Define a custom text theme using your project's fonts
+        textTheme: const TextTheme(
+          displayLarge: TextStyle(
+            fontFamily: 'UNGanganee',
+            fontSize: 57,
+            fontWeight: FontWeight.bold,
+          ),
+          displayMedium: TextStyle(
+            fontFamily: 'UNGanganee',
+            fontSize: 45,
+            fontWeight: FontWeight.bold,
+          ),
+          displaySmall: TextStyle(
+            fontFamily: 'UNSamantha',
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineLarge: TextStyle(
+            fontFamily: 'UNSamantha',
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineMedium: TextStyle(
+            fontFamily: 'UNSamantha',
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+          ),
+          headlineSmall: TextStyle(
+            fontFamily: 'UNSamantha',
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+          titleLarge: TextStyle(
+            fontFamily: 'UNSamantha',
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: AppColors.fieldFill,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none,
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        ),
+      );
 }

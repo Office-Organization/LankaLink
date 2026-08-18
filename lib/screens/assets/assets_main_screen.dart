@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/app_theme.dart';
 import '../../core/app_constants.dart';
 import 'assets_view_model.dart';
 
@@ -11,19 +12,20 @@ class AssetsMainScreen extends StatelessWidget {
     final vm = context.watch<AssetsViewModel>();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios, color: Colors.lightBlue),
+          // Changed to primary (Green) to match theme, or keep lightBlue if you prefer
+          icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'දේපල හා වත්කම්',
           style: TextStyle(
             fontFamily: 'UNSamantha',
-            color: Colors.black87,
+            color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
             fontSize: 22,
           ),
@@ -57,7 +59,8 @@ class AssetsMainScreen extends StatelessWidget {
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF56B4F8),
+                    // 🔥 CHANGED: AppColors.secondary -> AppColors.primary (This makes it Green)
+                    backgroundColor: AppColors.primary, 
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -66,7 +69,17 @@ class AssetsMainScreen extends StatelessWidget {
                   onPressed: () async {
                     // Next Page logic
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('තොරතුරු සුරැකිණි!')),
+                      const SnackBar(
+                        content: Text(
+                          'තොරතුරු සුරැකිණි!',
+                          style: TextStyle(
+                            fontFamily: 'UNSamantha', 
+                            color: AppColors.white, 
+                            fontWeight: FontWeight.bold
+                          ),
+                        ),
+                        backgroundColor: AppColors.success,
+                      ),
                     );
                   },
                   child: const Text(
@@ -74,7 +87,7 @@ class AssetsMainScreen extends StatelessWidget {
                     style: TextStyle(
                       fontFamily: 'UNSamantha',
                       fontSize: 24,
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -98,9 +111,10 @@ class AssetsMainScreen extends StatelessWidget {
         width: 250,
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF56B4F8), width: 2),
+          // 🔥 CHANGED: AppColors.secondary -> AppColors.primary (Makes border Green)
+          border: Border.all(color: AppColors.primary, width: 2), 
         ),
         alignment: Alignment.center,
         child: Text(
@@ -109,7 +123,7 @@ class AssetsMainScreen extends StatelessWidget {
             fontFamily: 'UNSamantha',
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: AppColors.textPrimary,
           ),
         ),
       ),
