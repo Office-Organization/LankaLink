@@ -25,11 +25,17 @@ void main() async {
   }
 
   // Enable Firestore Offline Persistence
+  // This should be set before any Firestore operations that might rely on it.
+  // The `enableNetwork()` call is generally not needed at startup if persistence is enabled,
+  // as the SDK manages network connectivity automatically.
   try {
-    await db.enableNetwork();
     db.settings = const Settings(persistenceEnabled: true);
-  } catch (e) {
-    debugPrint("Offline persistence error: $e");
+  } on FirebaseException catch (e) {
+    debugPrint("Firestore persistence setup failed: ${e.message}");
+  } catch (e, stackTrace) {
+    debugPrint(
+      "Unexpected error during Firestore persistence setup: $e\n$stackTrace",
+    );
   }
 
   runApp(
