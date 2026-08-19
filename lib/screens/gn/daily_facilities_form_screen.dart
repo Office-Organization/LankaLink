@@ -1,63 +1,59 @@
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/app_screen.dart';
-import 'agriculture_view_model.dart';
-import 'map_selection_screen.dart'; 
-import 'daily_facilities_form_screen.dart'; // <--- IMPORT THE NEW SCREEN HERE
+import 'daily_facilities_view_model.dart';
+import 'map_selection_screen.dart';
 
-class AgricultureFormScreen extends StatelessWidget {
-  const AgricultureFormScreen({super.key});
+class DailyFacilitiesFormScreen extends StatelessWidget {
+  const DailyFacilitiesFormScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AgricultureViewModel(),
-      child: const _AgricultureFormView(),
+      create: (_) => DailyFacilitiesViewModel(),
+      child: const _DailyFacilitiesFormView(),
     );
   }
 }
 
-class _AgricultureFormView extends StatefulWidget {
-  const _AgricultureFormView();
+class _DailyFacilitiesFormView extends StatefulWidget {
+  const _DailyFacilitiesFormView();
 
   @override
-  State<_AgricultureFormView> createState() => _AgricultureFormViewState();
+  State<_DailyFacilitiesFormView> createState() => _DailyFacilitiesFormViewState();
 }
 
-class _AgricultureFormViewState extends State<_AgricultureFormView> {
-  final _locationNameCtrl = TextEditingController();
+class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
   final _beneficiariesCtrl = TextEditingController();
 
   @override
   void dispose() {
-    _locationNameCtrl.dispose();
     _beneficiariesCtrl.dispose();
     super.dispose();
   }
 
   void _handleSave(BuildContext context) async {
-    final viewModel = context.read<AgricultureViewModel>();
+    final viewModel = context.read<DailyFacilitiesViewModel>();
 
     final success = await viewModel.saveDataAndProceed(
-      locationName: _locationNameCtrl.text.trim(),
       beneficiariesCount: _beneficiariesCtrl.text.trim(),
     );
 
     if (success && mounted) {
-      // --- MODIFIED NAVIGATION BLOCK ---
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => const DailyFacilitiesFormScreen(),
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('එදිනෙදා පහසුකම් තොරතුරු සාර්ථකව සුරකින ලදී.'),
+          backgroundColor: Colors.green,
         ),
       );
-      // ---------------------------------
+      // TODO: Navigate to the next page when available
+      // Navigator.push(...);
     }
   }
 
-  // UPDATED DIALOG LOGIC
   void _pickMapLocation(BuildContext context) {
-    final viewModel = context.read<AgricultureViewModel>();
+    final viewModel = context.read<DailyFacilitiesViewModel>();
 
     showDialog(
       context: context,
@@ -83,7 +79,7 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(ctx); 
+              Navigator.pop(ctx);
               final selectedCoordinates = await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -113,10 +109,10 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = context.watch<AgricultureViewModel>();
+    final viewModel = context.watch<DailyFacilitiesViewModel>();
 
     return AppScreen(
-      title: 'කෘෂිකර්මාන්තය',
+      title: 'එදිනෙදා පහසුකම්',
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         children: [
@@ -125,7 +121,7 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  '02. කෘෂිකර්මාන්තය',
+                  '03. එදිනෙදා පහසුකම්',
                   style: TextStyle(
                     fontFamily: 'UNSamantha',
                     fontWeight: FontWeight.bold,
@@ -135,41 +131,27 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'කෘෂිකාර්මික සංවර්ධන කටයුතු පිළිබඳ විස්තර මෙහි ඇතුළත් කරන්න.',
+                  'ඔබට තොරතුරු ඇතුලත් කිරීමට අවශ්‍ය තේරීම කරන්න:',
                   style: TextStyle(fontSize: 13, color: Colors.black54),
                 ),
                 const SizedBox(height: 24),
 
+                // 1. Facility Type Dropdown
                 _buildDropdownField(
-                  label: 'සංවර්ධන කටයුත්ත අවශ්‍ය වර්ගය තෝරන්න:',
+                  label: 'පහසුකම් වර්ගය තෝරන්න:',
                   hint: 'තෝරන්න',
-                  value: viewModel.selectedDevelopmentCategory,
-                  items: viewModel.developmentCategories,
-                  onChanged: (val) => viewModel.updateDevelopmentCategory(val),
+                  value: viewModel.selectedFacilityType,
+                  items: viewModel.facilityTypes,
+                  onChanged: (val) => viewModel.updateFacilityType(val),
                 ),
                 const SizedBox(height: 20),
 
-                _buildDropdownField(
-                  label: 'අවශ්‍ය සංවර්ධන වර්ගය තෝරන්න:',
-                  hint: 'ප්‍රතිසංස්කරණය / නව ඉදිකිරීම',
-                  value: viewModel.selectedDevelopmentType,
-                  items: viewModel.developmentTypes,
-                  onChanged: (val) => viewModel.updateDevelopmentType(val),
-                ),
-                const SizedBox(height: 20),
-
-                _buildInputField(
-                  label: 'අවශ්‍ය ස්ථානයේ නම:',
-                  hint: 'ස්ථානයේ නම ඇතුළත් කරන්න',
-                  controller: _locationNameCtrl,
-                ),
-                const SizedBox(height: 20),
-
+                // 2. Map Point Button
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'අවශ්‍ය ස්ථානය ලකුණු කරන්න:',
+                      'අවශ්‍ය ස්ථානය සලකුණු කරන්න:',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
@@ -208,13 +190,12 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
                             const SizedBox(width: 8),
                             Text(
                               viewModel.selectedLocationCoordinates ??
-                                  'Map Point තෝරන්න',
+                                  'Map Point Input',
                               style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
                                 color:
-                                    viewModel.selectedLocationCoordinates !=
-                                        null
+                                    viewModel.selectedLocationCoordinates != null
                                     ? Colors.blue
                                     : Colors.black87,
                               ),
@@ -227,6 +208,17 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
                 ),
                 const SizedBox(height: 20),
 
+                // 3. Government Land Dropdown
+                _buildDropdownField(
+                  label: 'මේ ඉදිකිරීමට රජයේ ඉඩමක් පවතීද?',
+                  hint: 'ඔව් / නැත',
+                  value: viewModel.hasGovernmentLand,
+                  items: viewModel.governmentLandOptions,
+                  onChanged: (val) => viewModel.updateGovernmentLand(val),
+                ),
+                const SizedBox(height: 20),
+
+                // 4. Beneficiaries Count Input
                 _buildInputField(
                   label: 'ප්‍රතිලාභීන් ගණන:',
                   hint: '0000',
@@ -238,6 +230,7 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
           ),
           const SizedBox(height: 32),
 
+          // Bottom Action Button
           ElevatedButton(
             onPressed: viewModel.isSaving ? null : () => _handleSave(context),
             style: ElevatedButton.styleFrom(
@@ -257,7 +250,7 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
                     ),
                   )
                 : const Text(
-                    'සුරකින්න සහ ඊළඟ පිටුවට', // Changed text to indicate navigation
+                    'ඊළඟ පිටුවට', // Next Page
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -299,14 +292,7 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
         const SizedBox(height: 8),
         TextField(
           controller: controller,
@@ -316,10 +302,7 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
             hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
             filled: true,
             fillColor: Colors.grey.shade50,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -348,29 +331,16 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
+        Text(label, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black87)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: value,
-          hint: Text(
-            hint,
-            style: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-          ),
+          hint: Text(hint, style: TextStyle(color: Colors.grey.shade400, fontSize: 13)),
           icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.grey.shade50,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
