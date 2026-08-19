@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lankalink/screens/auth/login_view_model.dart';
 import 'package:provider/provider.dart';
+import '../../core/admin_dashboard_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -30,9 +31,19 @@ class _LoginScreenState extends State<LoginScreen> {
       _passwordController.text.trim(),
     );
 
-    // On success, the AuthGate will handle navigation automatically because of the auth state change.
-    // We only need to handle the error case here.
-    if (mounted && !success && vm.error != null) {
+    if (!mounted) return;
+
+    if (success) {
+      // After successful login, check if the user is an admin.
+      if (vm.user != null && vm.user!.isAdmin) {
+        // If admin, navigate to the Admin Dashboard.
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
+        );
+      }
+      // For non-admin users, the AuthGate will handle navigation
+      // automatically based on the authentication state change.
+    } else if (vm.error != null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(vm.error!)));
