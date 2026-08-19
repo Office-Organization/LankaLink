@@ -78,11 +78,9 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyBLX2XJJRUMn1vWl40WKw0MfC3RYE_z9x0',
-    appId: '1:500455159127:web:d825fe318b86944a673a12',
+    appId: '1:500455159127:windows:d825fe318b86944a673a12',
     messagingSenderId: '500455159127',
     projectId: 'lankalink-a85ad',
-    authDomain: 'lankalink-a85ad.firebaseapp.com',
     storageBucket: 'lankalink-a85ad.firebasestorage.app',
-    measurementId: 'G-3T61R7HFLG',
   );
 }

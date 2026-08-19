@@ -9,23 +9,20 @@ plugins {
 
 android {
     namespace = "com.example.lankalink"
-    compileSdk = 35
+    compileSdk = 36 // 35 සිට 36 දක්වා වෙනස් කරන ලදී
     ndkVersion = flutter.ndkVersion
+    
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-
-
-        
     }
 
     defaultConfig {
-        // Specify your own unique Application ID.
-        applicationId = "com.lankalink.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
+        // Firebase JSON ෆයිල් එකට සහ namespace එකට ගැළපෙන ලෙස වෙනස් කරන ලදී
+        applicationId = "com.example.lankalink" 
+        
         minSdk = flutter.minSdkVersion
-        targetSdk = 35
+        targetSdk = 36 // 35 සිට 36 දක්වා වෙනස් කරන ලදී
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

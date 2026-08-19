@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Added to check the platform (kIsWeb)
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -16,9 +17,12 @@ void main() async {
   final db = FirebaseFirestore.instance;
   final auth = FirebaseAuth.instance;
 
-  // Force Firebase to NOT save the session. 
+  // Force Firebase to NOT save the session ONLY on Web.
   // This ensures a page refresh will clear the login and send them to the login screen.
-  await auth.setPersistence(Persistence.NONE);
+  // (setPersistence is not supported on mobile and causes a crash if run there).
+  if (kIsWeb) {
+    await auth.setPersistence(Persistence.NONE);
+  }
 
   // Enable Firestore Offline Persistence
   try {
