@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lankalink/screens/auth/login_view_model.dart';
 import 'package:provider/provider.dart';
-import '../../core/admin_dashboard_screen.dart';
 import 'signup_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -24,6 +23,132 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  // සිංහලෙන් Pop-up Alert Dialog පෙන්වීම
+  void _showErrorPopup({
+    required String title,
+    required String message,
+    required IconData icon,
+    required Color iconColor,
+    bool showSignupOption = false,
+  }) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: iconColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 42),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'UNSamantha',
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontFamily: 'UNGanganee',
+                fontSize: 13,
+                color: Colors.grey.shade700,
+                height: 1.4,
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (showSignupOption) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 45,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () {
+                    Navigator.pop(dialogCtx);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SignupScreen(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'ලියාපදිංචි වන්න',
+                    style: TextStyle(
+                      fontFamily: 'UNSamantha',
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text(
+                  'වසන්න',
+                  style: TextStyle(
+                    fontFamily: 'UNSamantha',
+                    color: Colors.grey,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                height: 45,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: iconColor,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(25),
+                    ),
+                    elevation: 0,
+                  ),
+                  onPressed: () => Navigator.pop(dialogCtx),
+                  child: const Text(
+                    'හරි',
+                    style: TextStyle(
+                      fontFamily: 'UNSamantha',
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _loginUser() async {
     final vm = context.read<LoginViewModel>();
     final success = await vm.login(
@@ -33,20 +158,56 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!mounted) return;
 
-    if (success) {
-      // After successful login, check if the user is an admin.
-      if (vm.user != null && vm.user!.isAdmin) {
-        // If admin, navigate to the Admin Dashboard.
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const AdminDashboardScreen()),
-        );
+    if (!success) {
+      switch (vm.errorType) {
+        case LoginErrorType.notActive:
+          _showErrorPopup(
+            title: 'ගිණුම සක්‍රිය කර නැත',
+            message: 'ඔබගේ ගිණුම තවමත් සක්‍රිය කර නොමැත. පරිපාලක (Admin) අනුමැතිය ලැබෙන තෙක් කරුණාකර රැඳී සිටින්න.',
+            icon: Icons.hourglass_top_rounded,
+            iconColor: Colors.orange,
+          );
+          break;
+
+        case LoginErrorType.deactivated:
+          _showErrorPopup(
+            title: 'ගිණුම අක්‍රිය කර ඇත',
+            message: 'ඔබගේ ගිණුම අක්‍රිය (Deactivate) කර ඇත. වැඩිදුර තොරතුරු සඳහා කරුණාකර පරිපාලක (Admin) අමතන්න.',
+            icon: Icons.block_flipped,
+            iconColor: Colors.redAccent,
+          );
+          break;
+
+        case LoginErrorType.noAccount:
+          _showErrorPopup(
+            title: 'ගිණුමක් හමු නොවීය',
+            message: 'මෙම තොරතුරු සඳහා ගිණුමක් ලියාපදිංචි කර නොමැත. කරුණාකර පළමුව ලියාපදිංචි වන්න.',
+            icon: Icons.person_off_outlined,
+            iconColor: Colors.blueAccent,
+            showSignupOption: true,
+          );
+          break;
+
+        case LoginErrorType.invalidCredentials:
+          _showErrorPopup(
+            title: 'තොරතුරු වැරදියි',
+            message: 'ඇතුළත් කළ මුරපදය වැරදියි. කරුණාකර නැවත උත්සාහ කරන්න.',
+            icon: Icons.lock_outline_rounded,
+            iconColor: Colors.red,
+          );
+          break;
+
+        default:
+          if (vm.error != null) {
+            _showErrorPopup(
+              title: 'දෝෂයක් මතු විය',
+              message: vm.error!,
+              icon: Icons.error_outline_rounded,
+              iconColor: Colors.red,
+            );
+          }
+          break;
       }
-      // For non-admin users, the AuthGate will handle navigation
-      // automatically based on the authentication state change.
-    } else if (vm.error != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(vm.error!)));
     }
   }
 

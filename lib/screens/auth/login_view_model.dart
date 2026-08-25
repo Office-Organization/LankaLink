@@ -5,116 +5,164 @@ import 'package:lankalink/models/app_user.dart';
 import '../../core/app_exception.dart';
 import '../../data/auth_repository.dart';
 
+enum LoginErrorType {
+  none,
+  noAccount,          // ගිණුමක් නොමැති විට
+  notActive,          // isActive: false වන විට
+  deactivated,        // ගිණුම අක්‍රිය කර ඇති විට
+  invalidCredentials, // මුරපදය වැරදි විට
+  generalError,
+}
+
 class LoginViewModel extends ChangeNotifier {
   LoginViewModel(this._auth);
   final AuthRepository _auth;
 
+  bool _isDisposed = false;
   bool isLoading = false;
   String? error;
+  LoginErrorType errorType = LoginErrorType.none;
   AppUser? user;
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isDisposed) {
+      super.notifyListeners();
+    }
+  }
 
   Future<bool> login(String loginId, String password) async {
     if (loginId.isEmpty || password.isEmpty) {
-      error = 'Please enter your Email/NIC and Password.';
+      error = 'කරුණාකර Email/NIC සහ මුරපදය ඇතුලත් කරන්න.';
+      errorType = LoginErrorType.generalError;
       notifyListeners();
       return false;
     }
 
     isLoading = true;
     error = null;
+    errorType = LoginErrorType.none;
     user = null;
     notifyListeners();
 
     try {
       String loginEmail = loginId.trim();
+      QuerySnapshot<Map<String, dynamic>> userQuery;
 
-      // Check if the input is an NIC (assuming NIC does not contain '@')
+      // 1. Firebase Auth කිරීමට පෙර Firestore එකෙන් පරිශීලකයා පරීක්ෂා කිරීම
       if (!loginId.contains('@')) {
-        // Find the user document by NIC in Firestore
-        final userQuery = await FirebaseFirestore.instance
+        // NIC මඟින් සෙවීම
+        userQuery = await FirebaseFirestore.instance
             .collection('users')
             .where('nic', isEqualTo: loginId.trim())
             .limit(1)
             .get();
+      } else {
+        // Email මඟින් සෙවීම
+        userQuery = await FirebaseFirestore.instance
+            .collection('users')
+            .where('email', isEqualTo: loginEmail)
+            .limit(1)
+            .get();
 
-        if (userQuery.docs.isEmpty) {
-          error = 'No account found for this NIC.';
-          isLoading = false;
-          notifyListeners();
-          return false;
+        if (userQuery.docs.isEmpty && loginEmail != loginEmail.toLowerCase()) {
+          userQuery = await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: loginEmail.toLowerCase())
+              .limit(1)
+              .get();
         }
-
-        // Retrieve the corresponding email for this NIC
-        loginEmail = userQuery.docs.first.data()['email'];
       }
 
-      // Proceed to authenticate with FirebaseAuth using the resolved email
-      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: loginEmail,
-        password: password,
-      );
+      // ගිණුමක් හමු නොවූයේ නම්
+      if (userQuery.docs.isEmpty) {
+        error = 'මෙම තොරතුරු සඳහා ගිණුමක් ලියාපදිංචි කර නොමැත. කරුණාකර පළමුව ලියාපදිංචි වන්න.';
+        errorType = LoginErrorType.noAccount;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      final userData = userQuery.docs.first.data();
+      final String resolvedEmail = userData['email'] ?? loginEmail;
+      final String role = userData['role']?.toString().toLowerCase().trim() ?? '';
+      final String status = userData['status']?.toString().toLowerCase().trim() ?? '';
+
+      // isActive පරීක්ෂා කිරීම
+      final dynamic isActiveData = userData['isActive'];
+      bool isActive = false;
+      if (isActiveData is bool) {
+        isActive = isActiveData;
+      } else if (isActiveData != null) {
+        isActive = isActiveData.toString().toLowerCase() == 'true';
+      }
+
+      // isDeactivated පරීක්ෂා කිරීම
+      final dynamic isDeactivatedData = userData['isDeactivated'];
+      bool isDeactivated = (status == 'deactivated');
+      if (isDeactivatedData is bool) {
+        isDeactivated = isDeactivatedData || isDeactivated;
+      } else if (isDeactivatedData != null) {
+        isDeactivated = isDeactivatedData.toString().toLowerCase() == 'true' || isDeactivated;
+      }
+
+      // A. ගිණුම Deactivate කර ඇත්නම් Pop-up එක සඳහා
+      if (isDeactivated) {
+        error = 'ඔබගේ ගිණුම අක්‍රිය කර ඇත. කරුණාකර පරිපාලක (Admin) අමතන්න.';
+        errorType = LoginErrorType.deactivated;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // B. ගිණුම තවමත් සක්‍රිය (Active) කර නොමැති නම් Pop-up එක සඳහා
+      if (role != 'admin' && !isActive) {
+        error = 'ඔබගේ ගිණුම තවමත් සක්‍රිය කර නොමැත. පරිපාලක (Admin) අනුමැතිය ලැබෙන තෙක් කරුණාකර රැඳී සිටින්න.';
+        errorType = LoginErrorType.notActive;
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
+
+      // 2. Account එක Active නම් පමණක් Firebase Auth වෙත Sign In වීම
+      UserCredential credential;
+      try {
+        credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: resolvedEmail,
+          password: password,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+          error = 'ඇතුළත් කළ මුරපදය වැරදියි. කරුණාකර නැවත උත්සාහ කරන්න.';
+          errorType = LoginErrorType.invalidCredentials;
+        } else {
+          error = 'දෝෂයක් මතු විය: ${e.message ?? e.code}';
+          errorType = LoginErrorType.generalError;
+        }
+        return false;
+      }
 
       final firebaseUser = credential.user;
       if (firebaseUser == null) {
         throw AppException('Login failed, user not found.');
       }
 
-      // Fetch the full user details from Firestore
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
-
-      if (!userDoc.exists || userDoc.data() == null) {
-        await FirebaseAuth.instance.signOut();
-        throw AppException('No user record found. Access denied.');
-      }
-
-      // Create a mutable copy of the map
-      final Map<String, dynamic> data = Map<String, dynamic>.from(userDoc.data()!);
-
-      // FIX: Safely check if the user account is active.
-      // This prevents a crash if an Admin manually typed "true" (String) instead of true (Boolean) in Firebase.
-      final dynamic isActiveData = data['isActive'];
-      bool isActive = false;
-      
-      if (isActiveData is bool) {
-        isActive = isActiveData;
-      } else if (isActiveData != null) {
-        // Fallback for strings like "true", "True", etc.
-        isActive = isActiveData.toString().toLowerCase() == 'true';
-      }
-
-      if (!isActive) {
-        await FirebaseAuth.instance.signOut(); // Sign out the just-logged-in user
-        error = 'Your account is not active yet. Please contact the admin.'; 
-        isLoading = false;
-        notifyListeners();
-        return false;
-      }
-
-      // Overwrite the map's isActive with a strict boolean just in case AppUser.fromMap expects a strict bool
-      data['isActive'] = isActive;
-
-      // Parse Firestore data into the AppUser model
-      user = AppUser.fromMap(firebaseUser.uid, data);
+      userData['isActive'] = isActive;
+      user = AppUser.fromMap(firebaseUser.uid, userData);
       return true;
-      
-    } on FirebaseAuthException catch (e, stackTrace) {
-      debugPrint('FirebaseAuthException during login: ${e.code}\n$stackTrace');
-      if (e.code == 'user-not-found' ||
-          e.code == 'wrong-password' ||
-          e.code == 'invalid-credential') {
-        error = 'Invalid credentials provided.';
-      } else {
-        error = 'An error occurred: ${e.message ?? e.code}';
-      }
-      return false;
-    } catch (e, stackTrace) {
+
+    } catch (e) {
       debugPrint('Generic error during login: $e');
-      debugPrint(stackTrace.toString());
-      // FIX: Show the exact error on the screen to help debug if it fails again
-      error = 'Login Error: ${e.toString()}'; 
+      if (errorType == LoginErrorType.none) {
+        error = 'දෝෂයක් මතු විය: ${e.toString()}';
+        errorType = LoginErrorType.generalError;
+      }
       return false;
     } finally {
       isLoading = false;
