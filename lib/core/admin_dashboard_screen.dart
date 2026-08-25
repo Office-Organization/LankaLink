@@ -6,8 +6,8 @@ import 'package:provider/provider.dart';
 import '../data/auth_repository.dart';
 import 'app_theme.dart';
 
-/// Admin dashboard featuring an analytics summary, regional breakdown, 
-/// recent activity feed, and a complete database record explorer.
+/// Admin dashboard featuring analytics, member management,
+/// user activation/deactivation, and database explorer.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -37,14 +37,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   static const _pageSize = 10;
   final Map<String, String> _collectionMap = {
     'survey_responses': 'Collected Data',
-    'users': 'Our Members',
+    'users': 'Our Members (Users)',
     'voters_2024': 'Members in Our System',
   };
 
-  String _currentCollectionId = 'survey_responses';
+  String _currentCollectionId = 'users';
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _searchField = 'documentId';
+  String _searchField = 'name';
+  String _userStatusFilter = 'all'; // 'all', 'active', 'deactivated'
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _documents = [];
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _pageStarts = [];
@@ -68,7 +69,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Data Loading Methods
+  // Data Loading & Status Toggle Methods
   // ---------------------------------------------------------------------------
 
   /// Aggregates counts and regional statistics from Firestore collections
@@ -112,8 +113,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       int active = 0, inactive = 0;
       for (final doc in usersSnap.docs) {
         final data = doc.data();
-        final isActive = data['isActive'] ?? (data['status'] == 'active' || data['active'] == true);
-        if (isActive == true) {
+        final isActive = data['isActive'] == true || data['status'] == 'active' || data['active'] == true;
+        if (isActive) {
           active++;
         } else {
           inactive++;
@@ -123,27 +124,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) {
         setState(() {
           _surveyCount = surveySnap.size;
-          _surveyDistricts = {
-            'Matara': sMatara,
-            'Galle': sGalle,
-            'Hambantota': sHambantota,
-          };
-
+          _surveyDistricts = {'Matara': sMatara, 'Galle': sGalle, 'Hambantota': sHambantota};
           _votersCount = votersSnap.size;
-          _votersDistricts = {
-            'Matara': vMatara,
-            'Galle': vGalle,
-            'Hambantota': vHambantota,
-          };
-
+          _votersDistricts = {'Matara': vMatara, 'Galle': vGalle, 'Hambantota': vHambantota};
           _membersActive = active;
           _membersDeactivated = inactive;
         });
       }
     } catch (_) {
-      // Fallback/graceful defaults if some collections are empty or missing fields
+      // Fallback/graceful defaults
     } finally {
       if (mounted) setState(() => _isLoadingStats = false);
+    }
+  }
+
+  /// Toggles isActive status for a user directly in Firestore
+  Future<void> _toggleUserActiveStatus(String docId, bool currentStatus) async {
+    final newStatus = !currentStatus;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(docId).update({
+        'isActive': newStatus,
+        'status': newStatus ? 'active' : 'deactivated',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: newStatus ? const Color(0xFF10B981) : const Color(0xFFE11D48),
+            content: Text(
+              newStatus ? 'User activated successfully' : 'User deactivated successfully',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      _fetchDashboardStatistics();
+      _loadExplorerPage(startAfter: _pageStarts.isEmpty ? null : _pageStarts.last);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.redAccent,
+            content: Text('Failed to update status: $e'),
+          ),
+        );
+      }
     }
   }
 
@@ -157,6 +183,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(_currentCollectionId);
 
+      // Apply User Status filter if in users collection
+      if (_currentCollectionId == 'users' && _userStatusFilter != 'all') {
+        final bool requiredActive = _userStatusFilter == 'active';
+        query = query.where('isActive', isEqualTo: requiredActive);
+      }
+
+      // Apply Search Filter
       if (_searchQuery.isNotEmpty) {
         if (_searchField == 'documentId') {
           query = query
@@ -167,7 +200,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               .where(_searchField, isGreaterThanOrEqualTo: _searchQuery)
               .where(_searchField, isLessThanOrEqualTo: '$_searchQuery\uf8ff');
         }
-      } else {
+      } else if (_currentCollectionId != 'users' || _userStatusFilter == 'all') {
         query = query.orderBy(FieldPath.documentId);
       }
 
@@ -208,7 +241,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _pageStarts.clear();
       _searchController.clear();
       _searchQuery = '';
-      _searchField = 'documentId';
+      _searchField = newCollectionId == 'users' ? 'name' : 'documentId';
+      _userStatusFilter = 'all';
     });
     _loadExplorerPage();
   }
@@ -231,7 +265,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 'survey_responses':
         return ['documentId', 'houseNumber', 'nic', 'fullName'];
       case 'users':
-        return ['documentId', 'name', 'email', 'nic'];
+        return ['name', 'email', 'phone', 'nic', 'town', 'district', 'documentId'];
       case 'voters_2024':
         return ['documentId', 'name', 'nic', 'houseNumber'];
       default:
@@ -259,7 +293,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Modern header with greeting, role, and sign-out
+  /// Modern header with greeting and sign-out
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.only(top: 54, left: 20, right: 20, bottom: 24),
@@ -287,9 +321,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               border: Border.all(color: Colors.white.withOpacity(0.6), width: 2),
             ),
             child: CircleAvatar(
-              radius: 26,
+              radius: 24,
               backgroundColor: Colors.white.withOpacity(0.2),
-              child: const Icon(Icons.person_rounded, size: 32, color: Colors.white),
+              child: const Icon(Icons.admin_panel_settings_rounded, size: 28, color: Colors.white),
             ),
           ),
           const SizedBox(width: 14),
@@ -299,10 +333,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Hello, Vihanga Manodhya',
+                  'Admin Control Panel',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 19,
+                    fontSize: 18,
                     fontWeight: FontWeight.w700,
                     letterSpacing: -0.2,
                   ),
@@ -313,10 +347,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Icon(Icons.verified_user_rounded, size: 14, color: Colors.white70),
                     SizedBox(width: 4),
                     Text(
-                      'System Administrator',
+                      'Users & Members Management',
                       style: TextStyle(
                         color: Colors.white70,
-                        fontSize: 13,
+                        fontSize: 12.5,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -340,7 +374,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   // ---------------------------------------------------------------------------
-  // Tab 1: Dashboard Overview (As in the Sketch)
+  // Tab 1: Dashboard Overview
   // ---------------------------------------------------------------------------
 
   Widget _buildDashboardOverview() {
@@ -351,23 +385,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
         children: [
-          // Section 1: Summary Cards Grid
           _buildSummaryCards(),
-
           const SizedBox(height: 24),
-
-          // Section 2: "Recently added or edited" Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Row(
                 children: [
-                  Icon(Icons.history_rounded, size: 22, color: Color(0xFF2C3E50)),
+                  Icon(Icons.people_rounded, size: 22, color: Color(0xFF2C3E50)),
                   SizedBox(width: 8),
                   Text(
-                    'Recently added or edited',
+                    'Registered Members & Users',
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 16.5,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF2C3E50),
                       letterSpacing: -0.2,
@@ -376,73 +406,66 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
               TextButton.icon(
-                onPressed: () => setState(() => _currentNavIndex = 1),
-                icon: const Icon(Icons.arrow_forward_rounded, size: 16),
-                label: const Text('View All', style: TextStyle(fontWeight: FontWeight.w700)),
+                onPressed: () {
+                  setState(() {
+                    _currentCollectionId = 'users';
+                    _currentNavIndex = 1;
+                  });
+                  _loadExplorerPage();
+                },
+                icon: const Icon(Icons.manage_accounts_rounded, size: 16),
+                label: const Text('Manage Users', style: TextStyle(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
-
           const SizedBox(height: 10),
-
-          // Section 3: Recent Records / Home Details Feed
-          _buildRecentRecordsFeed(),
+          _buildRecentUsersFeed(),
         ],
       ),
     );
   }
 
   Widget _buildSummaryCards() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isTablet = constraints.maxWidth > 600;
-        return Column(
+    return Column(
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Card 1: Collected Data
-                Expanded(
-                  child: _buildDistrictStatCard(
-                    title: 'Collected Data',
-                    totalCount: _surveyCount,
-                    districts: _surveyDistricts,
-                    cardColor: const Color(0xFFFFFFFF),
-                    accentColor: const Color(0xFF2187EA),
-                    icon: Icons.assignment_outlined,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Card 2: Our Members
-                Expanded(
-                  child: _buildMembersStatCard(
-                    title: 'Our Members',
-                    active: _membersActive,
-                    deactivated: _membersDeactivated,
-                    accentColor: const Color(0xFF10B981),
-                    icon: Icons.people_alt_outlined,
-                  ),
-                ),
-              ],
+            Expanded(
+              child: _buildDistrictStatCard(
+                title: 'Collected Data',
+                totalCount: _surveyCount,
+                districts: _surveyDistricts,
+                cardColor: Colors.white,
+                accentColor: const Color(0xFF2187EA),
+                icon: Icons.assignment_outlined,
+              ),
             ),
-            const SizedBox(height: 12),
-            // Card 3: Members in Our system
-            _buildDistrictStatCard(
-              title: 'Members in Our system',
-              totalCount: _votersCount,
-              districts: _votersDistricts,
-              cardColor: const Color(0xFFFFFFFF),
-              accentColor: const Color(0xFF8B5CF6),
-              icon: Icons.how_to_vote_outlined,
-              isFullWidth: true,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildMembersStatCard(
+                title: 'Our Members',
+                active: _membersActive,
+                deactivated: _membersDeactivated,
+                accentColor: const Color(0xFF10B981),
+                icon: Icons.people_alt_outlined,
+              ),
             ),
           ],
-        );
-      },
+        ),
+        const SizedBox(height: 12),
+        _buildDistrictStatCard(
+          title: 'Members in Our system',
+          totalCount: _votersCount,
+          districts: _votersDistricts,
+          cardColor: Colors.white,
+          accentColor: const Color(0xFF8B5CF6),
+          icon: Icons.how_to_vote_outlined,
+        ),
+      ],
     );
   }
 
-  /// Metric Card for Collected Data & Voters with district counts
   Widget _buildDistrictStatCard({
     required String title,
     required int totalCount,
@@ -450,7 +473,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     required Color cardColor,
     required Color accentColor,
     required IconData icon,
-    bool isFullWidth = false,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -545,13 +567,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
   }
 
-  /// Metric Card for Our Members (Active vs Deactivate)
   Widget _buildMembersStatCard({
     required String title,
     required int active,
@@ -680,22 +701,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Recent activity list displaying home and record details
-  Widget _buildRecentRecordsFeed() {
+  Widget _buildRecentUsersFeed() {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance
-          .collection('survey_responses')
-          .limit(10)
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').limit(6).snapshots(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return Container(
-            height: 180,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Center(
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
               child: CircularProgressIndicator(color: Color(0xFF2187EA)),
             ),
           );
@@ -703,163 +716,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
         if (snapshot.hasError || !snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Container(
-            padding: const EdgeInsets.all(32),
+            padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.black.withOpacity(0.04)),
             ),
-            child: Column(
-              children: [
-                Icon(Icons.home_work_outlined, size: 48, color: Colors.grey.shade400),
-                const SizedBox(height: 12),
-                const Text(
-                  'No recent home details yet',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-                ),
-                const SizedBox(height: 4),
-                const Text(
-                  'Newly added or modified survey responses will appear here.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
+            child: const Center(
+              child: Text(
+                'No registered users found.',
+                style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w500),
+              ),
             ),
           );
         }
 
-        final docs = snapshot.data!.docs;
-
         return Column(
-          children: docs.map((doc) => _buildRecentHomeItem(doc)).toList(),
+          children: snapshot.data!.docs.map((doc) => _buildUserListCard(doc)).toList(),
         );
       },
     );
   }
 
-  Widget _buildRecentHomeItem(QueryDocumentSnapshot<Map<String, dynamic>> document) {
-    final data = document.data();
-    final houseNumber = data['houseNumber']?.toString() ?? 'No House #';
-    final name = data['fullName'] ?? data['name'] ?? data['ownerName'] ?? 'Unnamed Resident';
-    final nic = data['nic']?.toString() ?? 'No NIC';
-    final district = data['district'] ?? data['city'] ?? 'Southern Province';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.black.withOpacity(0.04)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () async {
-            await Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AdminDocumentScreen(
-                  collection: 'survey_responses',
-                  documentId: document.id,
-                ),
-              ),
-            );
-            _fetchDashboardStatistics();
-          },
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2FE),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Icon(Icons.home_rounded, color: Color(0xFF0284C7), size: 26),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              'House: $houseNumber',
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w800,
-                                color: Color(0xFF1E293B),
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF1F5F9),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              district.toString().toUpperCase(),
-                              style: const TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                color: Color(0xFF475569),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$name • NIC: $nic',
-                        style: const TextStyle(
-                          fontSize: 12.5,
-                          color: Color(0xFF64748B),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'ID: ${document.id}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey.shade400,
-                          fontFamily: 'monospace',
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 22),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   // ---------------------------------------------------------------------------
-  // Tab 2: Database Explorer (Search, Collection Dropdown & Full Pagination)
+  // Tab 2: Database Explorer & User Management
   // ---------------------------------------------------------------------------
 
   Widget _buildDatabaseExplorer() {
@@ -893,6 +772,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
         ),
+
+        // Status Filter Chips (For Users Collection)
+        if (_currentCollectionId == 'users')
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 4.0),
+            child: Row(
+              children: [
+                _buildFilterChip(label: 'All Users', value: 'all'),
+                const SizedBox(width: 8),
+                _buildFilterChip(label: 'Active', value: 'active', color: const Color(0xFF10B981)),
+                const SizedBox(width: 8),
+                _buildFilterChip(label: 'Deactivated', value: 'deactivated', color: const Color(0xFFF43F5E)),
+              ],
+            ),
+          ),
 
         // Search Bar
         Padding(
@@ -958,8 +852,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
 
-        // Grid View of Records
-        Expanded(child: _buildExplorerGrid()),
+        // Records List
+        Expanded(child: _buildExplorerRecordsList()),
 
         // Pagination Bar
         _buildPagination(),
@@ -967,7 +861,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildExplorerGrid() {
+  Widget _buildFilterChip({required String label, required String value, Color? color}) {
+    final isSelected = _userStatusFilter == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _userStatusFilter = value;
+            _pageStarts.clear();
+          });
+          _loadExplorerPage();
+        }
+      },
+      selectedColor: (color ?? const Color(0xFF2187EA)).withOpacity(0.18),
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+        color: isSelected ? (color ?? const Color(0xFF2187EA)) : const Color(0xFF64748B),
+      ),
+      side: BorderSide(
+        color: isSelected ? (color ?? const Color(0xFF2187EA)) : Colors.grey.shade300,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    );
+  }
+
+  Widget _buildExplorerRecordsList() {
     if (_isLoadingRecords) {
       return const Center(child: CircularProgressIndicator(color: Color(0xFF2187EA)));
     }
@@ -996,35 +918,43 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 600 ? 3 : 2);
-        return GridView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 14,
-            mainAxisSpacing: 14,
-            childAspectRatio: 0.85,
-          ),
-          itemCount: _documents.length,
-          itemBuilder: (context, index) {
-            final document = _documents[index];
-            return _buildDocumentCard(document);
-          },
-        );
-      },
+    // Specialized view for Users with Activate / Deactivate controls
+    if (_currentCollectionId == 'users') {
+      return ListView.builder(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        itemCount: _documents.length,
+        itemBuilder: (context, index) => _buildUserListCard(_documents[index]),
+      );
+    }
+
+    // Generic list for Survey Responses & Voters
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+      itemCount: _documents.length,
+      itemBuilder: (context, index) => _buildGenericDocumentCard(_documents[index]),
     );
   }
 
-  Widget _buildDocumentCard(QueryDocumentSnapshot<Map<String, dynamic>> document) {
+  /// Custom User Card with Activate/Deactivate Toggle and Edit Action
+  Widget _buildUserListCard(QueryDocumentSnapshot<Map<String, dynamic>> document) {
     final data = document.data();
-    final title = (data['fullName'] ?? data['name'] ?? data['houseNumber'] ?? document.id).toString();
+    final name = (data['name'] ?? data['fullName'] ?? 'Unnamed User').toString();
+    final email = (data['email'] ?? 'No email').toString();
+    final phone = (data['phone'] ?? '').toString();
+    final district = (data['district'] ?? '').toString();
+    final town = (data['town'] ?? '').toString();
+    final role = (data['role'] ?? 'Member').toString();
+    final isActive = data['isActive'] == true || data['status'] == 'active' || data['active'] == true;
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: isActive ? Colors.transparent : const Color(0xFFFECDD3),
+          width: isActive ? 0 : 1.2,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -1033,11 +963,229 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ],
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: () async {
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Avatar with online status ring
+                Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 25,
+                      backgroundColor: isActive ? const Color(0xFFE0F2FE) : const Color(0xFFFFE4E6),
+                      child: Icon(
+                        Icons.person,
+                        size: 28,
+                        color: isActive ? const Color(0xFF0284C7) : const Color(0xFFE11D48),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: isActive ? const Color(0xFF10B981) : const Color(0xFFF43F5E),
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              name,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF1E293B),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // Status Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: isActive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isActive ? const Color(0xFFA7F3D0) : const Color(0xFFFECDD3),
+                              ),
+                            ),
+                            child: Text(
+                              isActive ? 'ACTIVE' : 'DEACTIVATED',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w800,
+                                color: isActive ? const Color(0xFF065F46) : const Color(0xFF9F1239),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        email,
+                        style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (phone.isNotEmpty)
+                        Text(
+                          'Phone: $phone',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+                        ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          if (role.isNotEmpty)
+                            _buildInfoPill(role.toUpperCase(), const Color(0xFF8B5CF6)),
+                          if (district.isNotEmpty || town.isNotEmpty)
+                            _buildInfoPill(
+                              '${town.isNotEmpty ? '$town, ' : ''}$district',
+                              const Color(0xFF0284C7),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            const Divider(height: 1, color: Color(0xFFF1F5F9)),
+            const SizedBox(height: 8),
+            // Actions Row: Activate/Deactivate Switch + Edit Button
+            Row(
+              children: [
+                // Quick Toggle Switch
+                Row(
+                  children: [
+                    Switch.adaptive(
+                      value: isActive,
+                      activeColor: const Color(0xFF10B981),
+                      onChanged: (val) => _toggleUserActiveStatus(document.id, isActive),
+                    ),
+                    Text(
+                      isActive ? 'Active' : 'Disabled',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w700,
+                        color: isActive ? const Color(0xFF065F46) : const Color(0xFF9F1239),
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                // Edit Button
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF2187EA)),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => AdminDocumentScreen(
+                          collection: 'users',
+                          documentId: document.id,
+                        ),
+                      ),
+                    );
+                    _fetchDashboardStatistics();
+                    _loadExplorerPage(startAfter: _pageStarts.isEmpty ? null : _pageStarts.last);
+                  },
+                  icon: const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF2187EA)),
+                  label: const Text(
+                    'Edit Details',
+                    style: TextStyle(color: Color(0xFF2187EA), fontWeight: FontWeight.bold, fontSize: 12.5),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoPill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: color),
+      ),
+    );
+  }
+
+  Widget _buildGenericDocumentCard(QueryDocumentSnapshot<Map<String, dynamic>> document) {
+    final data = document.data();
+    final title = (data['fullName'] ?? data['name'] ?? data['houseNumber'] ?? document.id).toString();
+    final sub = (data['nic'] ?? data['district'] ?? data['city'] ?? document.id).toString();
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE0F2FE),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(Icons.description_outlined, color: Color(0xFF0284C7)),
+        ),
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14.5, color: Color(0xFF1E293B)),
+        ),
+        subtitle: Text(
+          sub,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+        ),
+        trailing: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFFE3F2FD),
+            foregroundColor: const Color(0xFF1E88E5),
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          onPressed: () async {
             await Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => AdminDocumentScreen(
@@ -1046,44 +1194,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
             );
-            if (mounted) _loadExplorerPage(startAfter: _pageStarts.isEmpty ? null : _pageStarts.last);
+            _fetchDashboardStatistics();
+            _loadExplorerPage(startAfter: _pageStarts.isEmpty ? null : _pageStarts.last);
           },
-          child: Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.insert_drive_file_outlined, size: 34, color: Color(0xFF2187EA)),
-                const SizedBox(height: 10),
-                Text(
-                  title,
-                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Color(0xFF2C3E50)),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  document.id,
-                  style: const TextStyle(fontSize: 10.5, color: Colors.grey, fontFamily: 'monospace'),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE3F2FD),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: const Text(
-                    'View & Edit',
-                    style: TextStyle(color: Color(0xFF2187EA), fontWeight: FontWeight.bold, fontSize: 11.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          child: const Text('Edit', style: TextStyle(fontWeight: FontWeight.bold)),
         ),
       ),
     );
@@ -1142,7 +1256,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
-          BottomNavigationBarItem(icon: Icon(Icons.storage_rounded), label: 'Explorer'),
+          BottomNavigationBarItem(icon: Icon(Icons.manage_accounts_rounded), label: 'Members / Explorer'),
           BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
         ],
       ),
@@ -1151,7 +1265,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 }
 
 // -----------------------------------------------------------------------------
-// Document Editor Screen
+// Document & User Profile Editor Screen
 // -----------------------------------------------------------------------------
 
 class AdminDocumentScreen extends StatefulWidget {
@@ -1175,11 +1289,34 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
   bool _isSaving = false;
   String? _error;
 
+  // Controllers for direct user field editing
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _nicController = TextEditingController();
+  final TextEditingController _townController = TextEditingController();
+  String _selectedDistrict = 'Galle';
+  String _selectedRole = 'data collector';
+  bool _isActive = true;
+
+  final List<String> _districtsList = ['Galle', 'Matara', 'Hambantota', 'Colombo', 'Kalutara', 'Other'];
+  final List<String> _rolesList = ['data collector', 'admin', 'supervisor', 'surveyor', 'member'];
+
   @override
   void initState() {
     super.initState();
     _reference = FirebaseFirestore.instance.collection(widget.collection).doc(widget.documentId);
     _loadDocument();
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _phoneController.dispose();
+    _nicController.dispose();
+    _townController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadDocument() async {
@@ -1193,7 +1330,33 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
       if (!snapshot.exists || snapshot.data() == null) {
         throw StateError('This document no longer exists.');
       }
-      if (mounted) setState(() => _draft = _copyMap(snapshot.data()!));
+      final data = snapshot.data()!;
+      if (mounted) {
+        setState(() {
+          _draft = _copyMap(data);
+
+          // Populate specialized fields if editing user
+          if (widget.collection == 'users') {
+            _nameController.text = (data['name'] ?? data['fullName'] ?? '').toString();
+            _emailController.text = (data['email'] ?? '').toString();
+            _phoneController.text = (data['phone'] ?? '').toString();
+            _nicController.text = (data['nic'] ?? '').toString();
+            _townController.text = (data['town'] ?? '').toString();
+
+            final dist = (data['district'] ?? '').toString();
+            if (_districtsList.contains(dist)) {
+              _selectedDistrict = dist;
+            }
+
+            final role = (data['role'] ?? '').toString();
+            if (_rolesList.contains(role)) {
+              _selectedRole = role;
+            }
+
+            _isActive = data['isActive'] == true || data['status'] == 'active' || data['active'] == true;
+          }
+        });
+      }
     } catch (error) {
       if (mounted) setState(() => _error = error.toString());
     } finally {
@@ -1206,7 +1369,19 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
     setState(() => _isSaving = true);
 
     try {
-      await _reference.set(_draft!);
+      if (widget.collection == 'users') {
+        _draft!['name'] = _nameController.text.trim();
+        _draft!['email'] = _emailController.text.trim();
+        _draft!['phone'] = _phoneController.text.trim();
+        _draft!['nic'] = _nicController.text.trim();
+        _draft!['town'] = _townController.text.trim();
+        _draft!['district'] = _selectedDistrict;
+        _draft!['role'] = _selectedRole;
+        _draft!['isActive'] = _isActive;
+        _draft!['status'] = _isActive ? 'active' : 'deactivated';
+      }
+
+      await _reference.set(_draft!, SetOptions(merge: true));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Record updated successfully.')),
@@ -1229,7 +1404,7 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete this record?'),
-        content: const Text('This permanently removes the Firestore document.'),
+        content: const Text('This permanently removes this record from Firestore.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           FilledButton(
@@ -1248,7 +1423,7 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
       await _reference.delete();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Record deleted.')),
+          const SnackBar(content: Text('Record deleted successfully.')),
         );
         Navigator.pop(context);
       }
@@ -1270,7 +1445,10 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
           backgroundColor: const Color(0xFF1E88E5),
           foregroundColor: Colors.white,
           elevation: 0,
-          title: const Text('Edit Record', style: TextStyle(fontWeight: FontWeight.bold)),
+          title: Text(
+            widget.collection == 'users' ? 'Edit User Profile' : 'Edit Record',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           actions: [
             IconButton(
               tooltip: 'Delete record',
@@ -1299,7 +1477,7 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Icon(Icons.save_rounded),
-                    label: Text(_isSaving ? 'Saving...' : 'Save changes'),
+                    label: Text(_isSaving ? 'Saving...' : 'Save Changes'),
                   ),
                 ),
               ),
@@ -1316,6 +1494,11 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
       );
     }
 
+    if (widget.collection == 'users') {
+      return _buildDedicatedUserEditor();
+    }
+
+    // Fallback editor for other collections
     final draft = _draft!;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
@@ -1334,7 +1517,171 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
       ],
     );
   }
+
+  /// Structured and user-friendly form for Editing Users and Activating/Deactivating
+  Widget _buildDedicatedUserEditor() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
+      children: [
+        // Status Card with Quick Toggle
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _isActive ? const Color(0xFFECFDF5) : const Color(0xFFFFF1F2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: _isActive ? const Color(0xFFA7F3D0) : const Color(0xFFFECDD3),
+              width: 1.5,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _isActive ? Icons.check_circle_rounded : Icons.cancel_rounded,
+                    color: _isActive ? const Color(0xFF10B981) : const Color(0xFFF43F5E),
+                    size: 28,
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _isActive ? 'User is Active' : 'User is Deactivated',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: _isActive ? const Color(0xFF065F46) : const Color(0xFF9F1239),
+                        ),
+                      ),
+                      Text(
+                        _isActive ? 'User can log in and perform surveys' : 'User account is disabled',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isActive ? const Color(0xFF047857) : const Color(0xFFBE123C),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Switch.adaptive(
+                value: _isActive,
+                activeColor: const Color(0xFF10B981),
+                onChanged: (val) => setState(() => _isActive = val),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 20),
+
+        // User Details Card Form
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Personal & Contact Details',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Color(0xFF1E293B)),
+              ),
+              const SizedBox(height: 16),
+              _buildTextInput(controller: _nameController, label: 'Full Name', icon: Icons.person_outline),
+              const SizedBox(height: 14),
+              _buildTextInput(controller: _emailController, label: 'Email Address', icon: Icons.email_outlined, keyboardType: TextInputType.emailAddress),
+              const SizedBox(height: 14),
+              _buildTextInput(controller: _phoneController, label: 'Phone Number', icon: Icons.phone_outlined, keyboardType: TextInputType.phone),
+              const SizedBox(height: 14),
+              _buildTextInput(controller: _nicController, label: 'NIC Number', icon: Icons.badge_outlined),
+              const SizedBox(height: 14),
+              _buildTextInput(controller: _townController, label: 'Town / City', icon: Icons.location_city_outlined),
+              const SizedBox(height: 14),
+
+              // District Dropdown
+              DropdownButtonFormField<String>(
+                value: _districtsList.contains(_selectedDistrict) ? _selectedDistrict : _districtsList.first,
+                decoration: InputDecoration(
+                  labelText: 'District',
+                  prefixIcon: const Icon(Icons.map_outlined, color: Color(0xFF1E88E5)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                ),
+                items: _districtsList.map((d) => DropdownMenuItem(value: d, child: Text(d))).toList(),
+                onChanged: (val) => setState(() => _selectedDistrict = val ?? 'Galle'),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Role Dropdown
+              DropdownButtonFormField<String>(
+                value: _rolesList.contains(_selectedRole) ? _selectedRole : _rolesList.first,
+                decoration: InputDecoration(
+                  labelText: 'Assigned Role',
+                  prefixIcon: const Icon(Icons.security_outlined, color: Color(0xFF1E88E5)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade300)),
+                ),
+                items: _rolesList.map((r) => DropdownMenuItem(value: r, child: Text(r.toUpperCase()))).toList(),
+                onChanged: (val) => setState(() => _selectedRole = val ?? 'data collector'),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 16),
+        SelectableText(
+          'Document UID: ${widget.documentId}',
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 11, color: Colors.grey, fontFamily: 'monospace'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTextInput({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon, color: const Color(0xFF1E88E5), size: 20),
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Color(0xFF1E88E5), width: 1.8),
+        ),
+      ),
+    );
+  }
 }
+
+// -----------------------------------------------------------------------------
+// Generic Dynamic Field Value Editor (For Collections other than Users)
+// -----------------------------------------------------------------------------
 
 class _ValueEditor extends StatelessWidget {
   const _ValueEditor({
