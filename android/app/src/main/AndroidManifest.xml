@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="lankalink"
+        android:label="Lanka Link"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -30,6 +30,12 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- 🔥 FIX: Add your Google Maps API key here for the map to work on Android -->
+        <!-- See: https://developers.google.com/maps/documentation/android-sdk/get-api-key -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBfC5jn-QWjA01dv0wujuvrxgb_SjttALQ" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

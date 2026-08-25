@@ -1,34 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // Added to check the platform (kIsWeb)
 import 'package:firebase_core/firebase_core.dart';
+import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:provider/provider.dart';
 import 'firebase_options.dart';
-import 'core/app_constants.dart';
-import 'data/auth_repository.dart';
-import 'data/voter_repository.dart';
-import 'data/survey_repository.dart';
 import 'app.dart';
+import 'data/auth_repository.dart';
+import 'data/survey_repository.dart';
+import 'data/voter_repository.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  final auth = FirebaseAuth.instance;
   final db = FirebaseFirestore.instance;
+  final auth = FirebaseAuth.instance;
+
+  // Force Firebase to NOT save the session ONLY on Web.
+  // This ensures a page refresh will clear the login and send them to the login screen.
+  // (setPersistence is not supported on mobile and causes a crash if run there).
+  if (kIsWeb) {
+    await auth.setPersistence(Persistence.NONE);
+  }
+
+  // Enable Firestore Offline Persistence
+  // This should be set before any Firestore operations that might rely on it.
+  // The `enableNetwork()` call is generally not needed at startup if persistence is enabled,
+  // as the SDK manages network connectivity automatically.
+  try {
+    db.settings = const Settings(persistenceEnabled: true);
+  } on FirebaseException catch (e) {
+    debugPrint("Firestore persistence setup failed: ${e.message}");
+  } catch (e, stackTrace) {
+    debugPrint(
+      "Unexpected error during Firestore persistence setup: $e\n$stackTrace",
+    );
+  }
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthRepository>(
-          create: (_) => AuthRepository(auth, db),
-        ),
-        Provider<VoterRepository>(
-          create: (_) => VoterRepository(db),
-        ),
-        Provider<SurveyRepository>(
-          create: (_) => SurveyRepository(db, auth),
-        ),
+        ChangeNotifierProvider(create: (_) => AuthRepository(auth, db)),
+        Provider(create: (_) => SurveyRepository(db)),
+        Provider(create: (_) => VoterRepository(db)),
       ],
       child: const LankaLinkApp(),
     ),

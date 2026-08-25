@@ -1,25 +1,24 @@
-class Voter {
-  final String houseNumber;
+
+class AppVoter {
+  final String id;
   final String name;
   final String nic;
-  final String? gender;
-  final int serialNumber;
+  final String houseNumber;
+  final String gender;
 
-  const Voter({
-    required this.houseNumber,
+  const AppVoter({
+    required this.id,
     required this.name,
     required this.nic,
-    this.gender,
-    required this.serialNumber,
+    required this.houseNumber,
+    required this.gender,
   });
 
-  factory Voter.fromMap(Map<String, dynamic> map) {
-    return Voter(
-      houseNumber: map['House_Number'] as String? ?? '',
-      name: map['Name'] as String? ?? '',
-      nic: map['NIC'] as String? ?? '',
-      gender: map['Gender'] as String?,
-      serialNumber: int.tryParse(map['Serial_Number']?.toString() ?? '0') ?? 0,
-    );
-  }
+  factory AppVoter.fromMap(String id, Map<String, dynamic> map) => AppVoter(
+    id: id,
+    name: map['Name'] as String? ?? '',
+    nic: map['NIC'] as String? ?? '',
+    houseNumber: map['House_Number'] as String? ?? '',
+    gender: map['Gender'] as String? ?? '',
+  );
 }
