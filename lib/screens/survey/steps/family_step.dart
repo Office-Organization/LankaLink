@@ -49,6 +49,34 @@ class _FamilyStepState extends State<FamilyStep> {
     super.dispose();
   }
 
+  /// Calculates age based on Sri Lankan NIC format.
+  /// Falls back to [defaultAge] if the NIC is empty or invalid.
+  int _calculateAgeFromNIC(String nic, int defaultAge) {
+    if (nic.trim().isEmpty) return defaultAge;
+
+    final currentYear = DateTime.now().year;
+    final cleanNic = nic.trim().toUpperCase();
+
+    // Old NIC format (9 digits + V/X)
+    if (cleanNic.length == 10 && (cleanNic.endsWith('V') || cleanNic.endsWith('X'))) {
+      final yearStr = cleanNic.substring(0, 2);
+      final birthYear = int.tryParse(yearStr);
+      if (birthYear != null) {
+        return currentYear - (1900 + birthYear);
+      }
+    } 
+    // New NIC format (12 digits)
+    else if (cleanNic.length == 12) {
+      final yearStr = cleanNic.substring(0, 4);
+      final birthYear = int.tryParse(yearStr);
+      if (birthYear != null) {
+        return currentYear - birthYear;
+      }
+    }
+    
+    return defaultAge;
+  }
+
   Widget _buildSpecialNeedsSection(FamilyInfo family) {
     final hasData = family.specialNeedsCount > 0 || 
                     family.specialNeedsAmount > 0 || 
@@ -179,31 +207,44 @@ class _FamilyStepState extends State<FamilyStep> {
               style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black87),
             ),
             const SizedBox(width: 16),
-            SizedBox(
-              width: 150,
-              height: 40,
-              child: TextField(
-                controller: _houseNumberCtrl,
-                textAlign: TextAlign.center,
-                decoration: InputDecoration(
-                  hintText: 'අංකය (Enter ඔබන්න)',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                  filled: true,
-                  fillColor: AppColors.fieldFill,
-                  contentPadding: EdgeInsets.zero,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: Colors.black54, width: 1),
+            Expanded(
+              child: SizedBox(
+                height: 45, 
+                child: TextField(
+                  controller: _houseNumberCtrl,
+                  textAlign: TextAlign.center,
+                  decoration: InputDecoration(
+                    hintText: 'අංකය',
+                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                    filled: true,
+                    fillColor: AppColors.fieldFill,
+                    contentPadding: const EdgeInsets.only(left: 10), 
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.search, color: AppColors.primary),
+                      onPressed: () async {
+                        FocusScope.of(context).unfocus(); 
+                        if (_houseNumberCtrl.text.isNotEmpty) {
+                          await vm.searchHouse(_houseNumberCtrl.text);
+                          setState(() => _isEditingSpecialNeeds = false);
+                        }
+                      },
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Colors.black54, width: 1),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                    ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
-                  ),
+                  onSubmitted: (value) async {
+                    if (value.isNotEmpty) {
+                      await vm.searchHouse(value);
+                      setState(() => _isEditingSpecialNeeds = false);
+                    }
+                  },
                 ),
-                onSubmitted: (value) async {
-                  await vm.searchHouse(value);
-                  setState(() => _isEditingSpecialNeeds = false); 
-                },
               ),
             ),
           ],
@@ -298,6 +339,9 @@ class _FamilyStepState extends State<FamilyStep> {
   }
 
   Widget _buildMemberTile(BuildContext context, FamilyMember member) {
+    // Calculate the accurate age using the helper method
+    final displayAge = _calculateAgeFromNIC(member.nic, member.age);
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -317,7 +361,8 @@ class _FamilyStepState extends State<FamilyStep> {
           ),
         ),
         title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        subtitle: Text('වයස: ${member.age} | NIC: ${member.nic.isEmpty ? "-" : member.nic}', style: const TextStyle(fontSize: 12)),
+        // Updated the subtitle to use dynamically calculated displayAge
+        subtitle: Text('වයස: $displayAge | NIC: ${member.nic.isEmpty ? "-" : member.nic}', style: const TextStyle(fontSize: 12)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
