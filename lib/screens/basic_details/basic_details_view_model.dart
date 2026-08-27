@@ -77,7 +77,6 @@ class BasicDetailsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 🔥 වෙනත් සාමාජිකයන් (Other Members) සඳහා Methods
   void addOtherMember(OtherMemberInfo member) {
     final updatedList = List<OtherMemberInfo>.from(details.otherMembers)
       ..add(member);
@@ -87,7 +86,7 @@ class BasicDetailsViewModel extends ChangeNotifier {
 
   void updateOtherMember(OtherMemberInfo updatedMember) {
     final updatedList = details.otherMembers
-        .map((m) => (m.id) == (updatedMember.id) ? updatedMember : m)
+        .map((m) => m.id == updatedMember.id ? updatedMember : m)
         .toList();
     details = details.copyWith(otherMembers: updatedList);
     notifyListeners();
@@ -95,13 +94,12 @@ class BasicDetailsViewModel extends ChangeNotifier {
 
   void removeOtherMember(String id) {
     final updatedList = details.otherMembers
-        .where((m) => (m.id) != id)
+        .where((m) => m.id != id)
         .toList();
     details = details.copyWith(otherMembers: updatedList);
     notifyListeners();
   }
 
-  // 🔥 Age Calculation Methods
   int getAge(String dateOfBirth) {
     try {
       final dob = DateTime.parse(dateOfBirth);

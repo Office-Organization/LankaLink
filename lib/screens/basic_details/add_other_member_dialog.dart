@@ -15,9 +15,11 @@ class _AddOtherMemberDialogState extends State<AddOtherMemberDialog> {
   final _nameCtrl = TextEditingController();
   final _nicCtrl = TextEditingController();
   final _dobCtrl = TextEditingController();
+  final _antiSocialDescCtrl = TextEditingController();
 
   String _gender = 'පුරුෂ';
   String _relationship = 'බිරිඳ/ස්වාමිපුරුෂයා';
+  bool _hasAntiSocialActivities = false;
   String? _errorMsg;
 
   @override
@@ -30,7 +32,18 @@ class _AddOtherMemberDialogState extends State<AddOtherMemberDialog> {
       _dobCtrl.text = m.dateOfBirth ?? '';
       _gender = m.gender ?? 'පුරුෂ';
       _relationship = m.relationship ?? 'බිරිඳ/ස්වාමිපුරුෂයා';
+      _hasAntiSocialActivities = m.hasAntiSocialActivities;
+      _antiSocialDescCtrl.text = m.antiSocialDescription;
     }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _nicCtrl.dispose();
+    _dobCtrl.dispose();
+    _antiSocialDescCtrl.dispose();
+    super.dispose();
   }
 
   void _save() {
@@ -40,12 +53,18 @@ class _AddOtherMemberDialogState extends State<AddOtherMemberDialog> {
     }
 
     final member = OtherMemberInfo(
-      id: widget.existingMember?.id ?? '',
+      id: widget.existingMember?.id.isNotEmpty == true
+          ? widget.existingMember!.id
+          : DateTime.now().millisecondsSinceEpoch.toString(),
       name: _nameCtrl.text.trim(),
       nic: _nicCtrl.text.trim(),
       dateOfBirth: _dobCtrl.text.trim(),
       gender: _gender,
       relationship: _relationship,
+      hasAntiSocialActivities: _hasAntiSocialActivities,
+      antiSocialDescription: _hasAntiSocialActivities
+          ? _antiSocialDescCtrl.text.trim()
+          : '',
     );
     Navigator.pop(context, member);
   }
@@ -53,7 +72,10 @@ class _AddOtherMemberDialogState extends State<AddOtherMemberDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade300, width: 1.0),
+      ),
       insetPadding: const EdgeInsets.all(16),
       child: Container(
         width: double.infinity,
@@ -219,6 +241,46 @@ class _AddOtherMemberDialogState extends State<AddOtherMemberDialog> {
                     }).toList(),
                 onChanged: (val) => setState(() => _relationship = val!),
               ),
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 12),
+
+              const Text(
+                'සමාජ විරෝධී ක්‍රියාකාරකම් සිදු කර ඇත්ද?',
+                style: TextStyle(
+                  fontFamily: 'UNSamantha',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _hasAntiSocialActivities,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) =>
+                        setState(() => _hasAntiSocialActivities = true),
+                  ),
+                  const Text('ඇත', style: TextStyle(fontFamily: 'UNGanganee')),
+                  const SizedBox(width: 16),
+                  Checkbox(
+                    value: !_hasAntiSocialActivities,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) =>
+                        setState(() => _hasAntiSocialActivities = false),
+                  ),
+                  const Text('නැත', style: TextStyle(fontFamily: 'UNGanganee')),
+                ],
+              ),
+              if (_hasAntiSocialActivities) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _antiSocialDescCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'සමාජ විරෝධී ක්‍රියාකාරකම් විස්තරය ඇතුළත් කරන්න...',
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 32),
               SizedBox(

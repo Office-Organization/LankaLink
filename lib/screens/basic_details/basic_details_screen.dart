@@ -5,7 +5,8 @@ import '../../core/app_constants.dart';
 import 'basic_details_view_model.dart';
 import 'add_child_dialog.dart';
 import 'add_other_member_dialog.dart';
-import '../../models/basic_details.dart' show OtherMemberInfo, ChildInfo, BasicDetails;
+import '../../models/basic_details.dart'
+    show OtherMemberInfo, ChildInfo, BasicDetails;
 
 class BasicDetailsScreen extends StatefulWidget {
   const BasicDetailsScreen({super.key});
@@ -15,7 +16,6 @@ class BasicDetailsScreen extends StatefulWidget {
 }
 
 class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
-  // මූලික තොරතුරු සංස්කරණය කරනවාද යන්න තීරණය කරන State variable එක
   bool _isEditingPersonalInfo = false;
 
   @override
@@ -51,7 +51,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Error message display area
                   if (vm.error != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -76,14 +75,15 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // නව View/Edit ලොජික් එක ඇතුළත් කළ මූලික තොරතුරු කොටස
                   _buildPersonalInfoSection(details, vm),
 
                   const SizedBox(height: 32),
 
-                  // Section: Manage children details (under 18 years of age)
+                  // Section: 18 ට අඩු දරුවන්
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       title: const Text(
                         'වයස අවුරුදු (18) ට අඩු දරුවන් පිළිබඳ විස්තර',
@@ -108,26 +108,36 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                               ),
                             ),
                             subtitle: Text(
-                              'වයස: අවුරුදු ${vm.getAge(child.dob)} | උපන් දිනය: ${child.dob} | ${child.gender}',
+                              'වයස: අවුරුදු ${vm.getAge(child.dob)} | උපන් දිනය: ${child.dob} | ${child.gender}'
+                              '${child.hasAntiSocialActivities ? '\n(සමාජ විරෝධී ක්‍රියාකාරකම්: ${child.antiSocialDescription.isNotEmpty ? child.antiSocialDescription : 'ඇත'})' : ''}',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit, color: AppColors.info),
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: AppColors.info,
+                                  ),
                                   onPressed: () async {
-                                    final updatedChild = await showDialog<ChildInfo>(
-                                      context: context,
-                                      builder: (_) => AddChildDialog(existingChild: child),
-                                    );
+                                    final updatedChild =
+                                        await showDialog<ChildInfo>(
+                                          context: context,
+                                          builder: (_) => AddChildDialog(
+                                            existingChild: child,
+                                          ),
+                                        );
                                     if (updatedChild != null) {
                                       vm.updateChild(updatedChild);
                                     }
                                   },
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete, color: AppColors.danger),
-                                  onPressed: () => vm.removeChild(child.id),
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: AppColors.danger,
+                                  ),
+                                  onPressed: () => vm.removeChild(child.id!),
                                 ),
                               ],
                             ),
@@ -166,9 +176,11 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Section: Manage other adult family members (over 18 years of age)
+                  // Section: වෙනත් පවුලේ සාමාජිකයන් (අවු: 18 ට වැඩි)
                   Theme(
-                    data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                    data: Theme.of(
+                      context,
+                    ).copyWith(dividerColor: Colors.transparent),
                     child: ExpansionTile(
                       title: const Text(
                         'වෙනත් පවුලේ සාමාජිකයන් (අවු: 18 ට වැඩි)',
@@ -193,26 +205,37 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                               ),
                             ),
                             subtitle: Text(
-                              'NIC: ${member.nic ?? '-'} | ${member.gender ?? '-'} | වයස: ${member.dateOfBirth != null && member.dateOfBirth!.isNotEmpty ? vm.getAge(member.dateOfBirth!).toString() : '-'}',
+                              'NIC: ${member.nic ?? '-'} | ${member.gender ?? '-'} | වයස: ${member.dateOfBirth != null && member.dateOfBirth!.isNotEmpty ? vm.getAge(member.dateOfBirth!).toString() : '-'}'
+                              '${member.hasAntiSocialActivities ? '\n(සමාජ විරෝධී ක්‍රියාකාරකම්: ${member.antiSocialDescription.isNotEmpty ? member.antiSocialDescription : 'ඇත'})' : ''}',
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: const Icon(Icons.edit, color: AppColors.info),
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: AppColors.info,
+                                  ),
                                   onPressed: () async {
-                                    final updatedMember = await showDialog<OtherMemberInfo>(
-                                      context: context,
-                                      builder: (_) => AddOtherMemberDialog(existingMember: member),
-                                    );
+                                    final updatedMember =
+                                        await showDialog<OtherMemberInfo>(
+                                          context: context,
+                                          builder: (_) => AddOtherMemberDialog(
+                                            existingMember: member,
+                                          ),
+                                        );
                                     if (updatedMember != null) {
                                       vm.updateOtherMember(updatedMember);
                                     }
                                   },
                                 ),
                                 IconButton(
-                                  icon: const Icon(Icons.delete, color: AppColors.danger),
-                                  onPressed: () => vm.removeOtherMember(member.id),
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: AppColors.danger,
+                                  ),
+                                  onPressed: () =>
+                                      vm.removeOtherMember(member.id),
                                 ),
                               ],
                             ),
@@ -229,10 +252,12 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                               ),
                             ),
                             onPressed: () async {
-                              final newMember = await showDialog<OtherMemberInfo>(
-                                context: context,
-                                builder: (_) => const AddOtherMemberDialog(),
-                              );
+                              final newMember =
+                                  await showDialog<OtherMemberInfo>(
+                                    context: context,
+                                    builder: (_) =>
+                                        const AddOtherMemberDialog(),
+                                  );
                               if (newMember != null) {
                                 vm.addOtherMember(newMember);
                               }
@@ -251,21 +276,29 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  _buildLabel('සමාජ විරෝධී ක්‍රියාකාරකම් සිදු කර ඇත්ද?'),
+                  _buildLabel('ගෘහ මූලිකයාගේ සමාජ විරෝධී ක්‍රියාකාරකම්'),
                   Row(
                     children: [
-                      const Text('ඇත', style: TextStyle(fontFamily: 'UNGanganee')),
+                      const Text(
+                        'ඇත',
+                        style: TextStyle(fontFamily: 'UNGanganee'),
+                      ),
                       Checkbox(
                         value: details.hasAntiSocialActivities,
                         activeColor: AppColors.primary,
-                        onChanged: (val) => vm.updateField(hasAntiSocialActivities: true),
+                        onChanged: (val) =>
+                            vm.updateField(hasAntiSocialActivities: true),
                       ),
                       const SizedBox(width: 16),
-                      const Text('නැත', style: TextStyle(fontFamily: 'UNGanganee')),
+                      const Text(
+                        'නැත',
+                        style: TextStyle(fontFamily: 'UNGanganee'),
+                      ),
                       Checkbox(
                         value: !details.hasAntiSocialActivities,
                         activeColor: AppColors.primary,
-                        onChanged: (val) => vm.updateField(hasAntiSocialActivities: false),
+                        onChanged: (val) =>
+                            vm.updateField(hasAntiSocialActivities: false),
                       ),
                     ],
                   ),
@@ -274,7 +307,8 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                     TextFormField(
                       initialValue: details.antiSocialDescription,
                       maxLines: 4,
-                      onChanged: (val) => vm.updateField(antiSocialDescription: val),
+                      onChanged: (val) =>
+                          vm.updateField(antiSocialDescription: val),
                       decoration: const InputDecoration(
                         hintText: 'විස්තරය මෙහි ලියන්න...',
                       ),
@@ -282,7 +316,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   ],
                   const SizedBox(height: 40),
 
-                  // Submit Data Button
                   Center(
                     child: SizedBox(
                       width: 200,
@@ -299,9 +332,15 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                           final success = await vm.save();
                           if (success && context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('දත්ත සාර්ථකව සුරැකිණි!')),
+                              const SnackBar(
+                                content: Text('දත්ත සාර්ථකව සුරැකිණි!'),
+                              ),
                             );
-                            Navigator.pushNamed(context, Routes.housing, arguments: vm.houseNumber);
+                            Navigator.pushNamed(
+                              context,
+                              Routes.housing,
+                              arguments: vm.houseNumber,
+                            );
                           }
                         },
                         child: const Text(
@@ -322,12 +361,15 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
     );
   }
 
-  // View Mode සහ Edit Mode පාලනය කරන ප්‍රධාන කොටස
-  Widget _buildPersonalInfoSection(BasicDetails details, BasicDetailsViewModel vm) {
-    // දත්ත දැනටමත් ඇතුළත් කර ඇත්දැයි බැලීම
-    final hasData = details.headName.isNotEmpty || details.nic.isNotEmpty || details.phone.isNotEmpty;
+  Widget _buildPersonalInfoSection(
+    BasicDetails details,
+    BasicDetailsViewModel vm,
+  ) {
+    final hasData =
+        details.headName.isNotEmpty ||
+        details.nic.isNotEmpty ||
+        details.phone.isNotEmpty;
 
-    // View Mode (දත්ත පෙන්වන කොටුව)
     if (hasData && !_isEditingPersonalInfo) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -344,11 +386,16 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
               children: [
                 const Text(
                   'ගෘහ මූලිකයාගේ විස්තර',
-                  style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontFamily: 'UNSamantha',
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-                  onPressed: () => setState(() => _isEditingPersonalInfo = true),
+                  onPressed: () =>
+                      setState(() => _isEditingPersonalInfo = true),
                 ),
               ],
             ),
@@ -365,7 +412,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
       );
     }
 
-    // Edit Mode (දත්ත වෙනස් කරන TextFields)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -374,12 +420,17 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
           children: [
             const Text(
               'ගෘහ මූලිකයාගේ විස්තර ඇතුළත් කරන්න',
-              style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(
+                fontFamily: 'UNSamantha',
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
             ),
             if (hasData)
               IconButton(
                 icon: const Icon(Icons.check, color: Colors.green, size: 24),
-                onPressed: () => setState(() => _isEditingPersonalInfo = false),
+                onPressed: () =>
+                    setState(() => _isEditingPersonalInfo = false),
               ),
           ],
         ),
@@ -422,12 +473,15 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
           onTap: () async {
             final selectedDate = await showDatePicker(
               context: context,
-              initialDate: details.dob.isNotEmpty ? (DateTime.tryParse(details.dob) ?? DateTime.now()) : DateTime.now(),
+              initialDate: details.dob.isNotEmpty
+                  ? (DateTime.tryParse(details.dob) ?? DateTime.now())
+                  : DateTime.now(),
               firstDate: DateTime(1950),
               lastDate: DateTime.now(),
             );
             if (selectedDate != null) {
-              final formattedDate = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+              final formattedDate =
+                  '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
               vm.updateField(dob: formattedDate);
             }
           },
@@ -444,10 +498,16 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   details.dob.isNotEmpty ? details.dob : 'උපන් දිනය තෝරන්න',
                   style: TextStyle(
                     fontFamily: 'UNGanganee',
-                    color: details.dob.isEmpty ? AppColors.textDisabled : AppColors.textSecondary,
+                    color: details.dob.isEmpty
+                        ? AppColors.textDisabled
+                        : AppColors.textSecondary,
                   ),
                 ),
-                const Icon(Icons.calendar_today, color: AppColors.info, size: 20),
+                const Icon(
+                  Icons.calendar_today,
+                  color: AppColors.info,
+                  size: 20,
+                ),
               ],
             ),
           ),
@@ -470,11 +530,17 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
         _buildLabel('ජාතිය'),
         DropdownButtonFormField<String>(
           initialValue: details.nationality,
-          decoration: const InputDecoration(filled: true, fillColor: AppColors.fieldFill),
+          decoration: const InputDecoration(
+            filled: true,
+            fillColor: AppColors.fieldFill,
+          ),
           items: ['සිංහල', 'දෙමළ', 'මුස්ලිම්'].map((String val) {
             return DropdownMenuItem(
               value: val,
-              child: Text(val, style: const TextStyle(fontFamily: 'UNGanganee')),
+              child: Text(
+                val,
+                style: const TextStyle(fontFamily: 'UNGanganee'),
+              ),
             );
           }).toList(),
           onChanged: (val) => vm.updateField(nationality: val),
@@ -483,7 +549,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
     );
   }
 
-  // View Mode එකේ පේළි පෙන්වීමට සරල Widget එකක්
   Widget _buildViewRow(String label, String value) {
     if (value.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -493,17 +558,25 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.black54, fontSize: 13),
+            ),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // Helper widget to construct standard labels
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),

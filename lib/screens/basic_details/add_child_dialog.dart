@@ -3,7 +3,7 @@ import '../../core/app_theme.dart';
 import '../../models/basic_details.dart';
 
 class AddChildDialog extends StatefulWidget {
-  final ChildInfo? existingChild; // Edit කිරීම සඳහා
+  final ChildInfo? existingChild;
 
   const AddChildDialog({super.key, this.existingChild});
 
@@ -16,6 +16,7 @@ class _AddChildDialogState extends State<AddChildDialog> {
   final _dobCtrl = TextEditingController();
   final _disabilityCtrl = TextEditingController();
   final _chronicCtrl = TextEditingController();
+  final _antiSocialDescCtrl = TextEditingController();
 
   bool _attendsSchool = true;
   String _gender = 'පුරුෂ';
@@ -26,12 +27,12 @@ class _AddChildDialogState extends State<AddChildDialog> {
   bool _hasOtherNeed = false;
 
   bool _receivesGovtAssistance = false;
+  bool _hasAntiSocialActivities = false;
   String? _errorMsg;
 
   @override
   void initState() {
     super.initState();
-    // Edit කරන්නේ නම් කලින් දත්ත පෝරමයට පිරවීම
     if (widget.existingChild != null) {
       final c = widget.existingChild!;
       _nameCtrl.text = c.name;
@@ -50,7 +51,19 @@ class _AddChildDialogState extends State<AddChildDialog> {
       _hasVisualNeed = c.hasVisualNeed;
       _hasOtherNeed = c.hasOtherNeed;
       _receivesGovtAssistance = c.receivesGovtAssistance;
+      _hasAntiSocialActivities = c.hasAntiSocialActivities;
+      _antiSocialDescCtrl.text = c.antiSocialDescription;
     }
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _dobCtrl.dispose();
+    _disabilityCtrl.dispose();
+    _chronicCtrl.dispose();
+    _antiSocialDescCtrl.dispose();
+    super.dispose();
   }
 
   void _save() {
@@ -60,9 +73,7 @@ class _AddChildDialogState extends State<AddChildDialog> {
     }
 
     final child = ChildInfo(
-      id: widget
-          .existingChild
-          ?.id, // අලුත් එකක්ද Edit කරන එකක්ද යන්න තීරණය කරයි
+      id: widget.existingChild?.id,
       name: _nameCtrl.text.trim(),
       attendsSchool: _attendsSchool,
       dob: _dobCtrl.text.trim(),
@@ -74,6 +85,10 @@ class _AddChildDialogState extends State<AddChildDialog> {
       receivesGovtAssistance: _receivesGovtAssistance,
       disabilityAllowance: double.tryParse(_disabilityCtrl.text.trim()) ?? 0.0,
       chronicIllnessAllowance: double.tryParse(_chronicCtrl.text.trim()) ?? 0.0,
+      hasAntiSocialActivities: _hasAntiSocialActivities,
+      antiSocialDescription: _hasAntiSocialActivities
+          ? _antiSocialDescCtrl.text.trim()
+          : '',
     );
     Navigator.pop(context, child);
   }
@@ -81,7 +96,10 @@ class _AddChildDialogState extends State<AddChildDialog> {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: Colors.grey.shade300, width: 1.0),
+      ),
       insetPadding: const EdgeInsets.all(16),
       child: Container(
         width: double.infinity,
@@ -381,6 +399,46 @@ class _AddChildDialogState extends State<AddChildDialog> {
                 TextField(
                   controller: _chronicCtrl,
                   keyboardType: TextInputType.number,
+                ),
+              ],
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 12),
+
+              const Text(
+                'සමාජ විරෝධී ක්‍රියාකාරකම් සිදු කර ඇත්ද?',
+                style: TextStyle(
+                  fontFamily: 'UNSamantha',
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Row(
+                children: [
+                  Checkbox(
+                    value: _hasAntiSocialActivities,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) =>
+                        setState(() => _hasAntiSocialActivities = true),
+                  ),
+                  const Text('ඇත', style: TextStyle(fontFamily: 'UNGanganee')),
+                  const SizedBox(width: 16),
+                  Checkbox(
+                    value: !_hasAntiSocialActivities,
+                    activeColor: AppColors.primary,
+                    onChanged: (val) =>
+                        setState(() => _hasAntiSocialActivities = false),
+                  ),
+                  const Text('නැත', style: TextStyle(fontFamily: 'UNGanganee')),
+                ],
+              ),
+              if (_hasAntiSocialActivities) ...[
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _antiSocialDescCtrl,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'සමාජ විරෝධී ක්‍රියාකාරකම් විස්තරය ඇතුළත් කරන්න...',
+                  ),
                 ),
               ],
 

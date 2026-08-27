@@ -8,6 +8,7 @@ import '../models/assets_details.dart'; // 🔥 අලුත් Import එක
 
 class SurveyRepository {
   SurveyRepository(this._db);
+  
   final FirebaseFirestore _db;
   final String _collection = 'survey_responses';
 
@@ -22,6 +23,7 @@ class SurveyRepository {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
       if (!doc.exists || doc.data() == null) return null;
+      
       return Survey.fromMap(doc.data()!);
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
@@ -39,6 +41,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      
       List<Map<String, dynamic>> membersData = family.members
           .map(
             (m) => {
@@ -78,6 +81,7 @@ class SurveyRepository {
 
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('basicDetails')) {
@@ -91,6 +95,7 @@ class SurveyRepository {
           final children = survey.family.members
               .where((m) => !m.isAdult)
               .toList();
+              
           return BasicDetails(
             houseNumber: houseNumber,
             headName: adults.isNotEmpty ? adults.first.name : '',
@@ -102,8 +107,7 @@ class SurveyRepository {
                     id: c.id,
                     name: c.name,
                     gender: c.gender,
-                    dob:
-                        "${c.birthday.year}-${c.birthday.month.toString().padLeft(2, '0')}-${c.birthday.day.toString().padLeft(2, '0')}",
+                    dob: "${c.birthday.year}-${c.birthday.month.toString().padLeft(2, '0')}-${c.birthday.day.toString().padLeft(2, '0')}",
                   ),
                 )
                 .toList(),
@@ -144,6 +148,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('housingDetails')) {
@@ -180,6 +185,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('incomeDetails')) {
@@ -217,6 +223,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
+      
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('assetsDetails')) {
