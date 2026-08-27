@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/app_screen.dart';
@@ -46,10 +47,57 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
     super.dispose();
   }
 
+  void _populateFormFromDoc(
+      String docId, Map<String, dynamic> data, InfrastructureViewModel vm) {
+    final roadData = (data['roads_infrastructure'] as Map?) ?? {};
+    final bridgeData = (data['bridges_infrastructure'] as Map?) ?? {};
+
+    setState(() {
+      _roadNameCtrl.text = (roadData['road_name'] ?? '').toString();
+      _roadDistanceCtrl.text =
+          (roadData['development_distance'] ?? '').toString();
+      _roadBeneficiariesCtrl.text =
+          (roadData['beneficiaries_count'] ?? '').toString();
+
+      _bridgeNameCtrl.text = (bridgeData['bridge_name'] ?? '').toString();
+      _bridgeConditionCtrl.text =
+          (bridgeData['current_condition'] ?? '').toString();
+      _bridgeBeneficiariesCtrl.text =
+          (bridgeData['beneficiaries_count'] ?? '').toString();
+    });
+
+    vm.setEditingDocId(docId);
+    vm.updateRoadType((roadData['road_type'] ?? '').toString().isNotEmpty
+        ? roadData['road_type']
+        : null);
+    vm.updateBridgeType((bridgeData['bridge_type'] ?? '').toString().isNotEmpty
+        ? bridgeData['bridge_type']
+        : null);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('තෝරාගත් දත්ත පෝරමයට ඇතුළත් කරන ලදී.'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _clearForm(InfrastructureViewModel vm) {
+    setState(() {
+      _roadNameCtrl.clear();
+      _roadDistanceCtrl.clear();
+      _roadBeneficiariesCtrl.clear();
+      _bridgeNameCtrl.clear();
+      _bridgeConditionCtrl.clear();
+      _bridgeBeneficiariesCtrl.clear();
+    });
+    vm.clearEditing();
+  }
+
   void _handleSave(BuildContext context) async {
     final viewModel = context.read<InfrastructureViewModel>();
 
-    final success = await viewModel.saveDataAndProceed(
+    final bool success = await viewModel.saveDataAndProceed(
       roadName: _roadNameCtrl.text.trim(),
       roadDistance: _roadDistanceCtrl.text.trim(),
       roadBeneficiaries: _roadBeneficiariesCtrl.text.trim(),
@@ -60,14 +108,28 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('යටිතල පහසුකම් තොරතුරු සාර්ථකව සුරකින ලදී.'),
+        SnackBar(
+          content: Text(viewModel.editingDocId != null
+              ? 'තොරතුරු සාර්ථකව යාවත්කාලීන කරන ලදී.'
+              : 'යටිතල පහසුකම් තොරතුරු සාර්ථකව සුරකින ලදී.'),
           backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
         ),
       );
+
+      _clearForm(viewModel);
+
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const AgricultureFormScreen()),
+      );
+    } else if (!success && mounted && viewModel.errorMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(viewModel.errorMessage!),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 4),
+        ),
       );
     }
   }
@@ -81,6 +143,45 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
       child: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
         children: [
+          // Collector Location Card
+          _buildCollectorLocationCard(viewModel),
+          const SizedBox(height: 16),
+
+          // Active Edit Mode Banner (If editing)
+          if (viewModel.editingDocId != null) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFCD34D)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit_note_rounded,
+                      color: Color(0xFFD97706)),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'දැනටමත් ඇතුළත් කළ දත්ත සංස්කරණය කරමින් පවතී.',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12.5,
+                        color: Color(0xFF92400E),
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => _clearForm(viewModel),
+                    child: const Text('අලුත් එකක් (New)',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // Roads Section
           _buildCard(
             child: Column(
@@ -182,12 +283,17 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
 
+          // Save / Update Action Button
           ElevatedButton(
-            onPressed: viewModel.isSaving ? null : () => _handleSave(context),
+            onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
+                ? null
+                : () => _handleSave(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
+              backgroundColor: viewModel.editingDocId != null
+                  ? const Color(0xFFD97706)
+                  : Colors.blue,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -202,16 +308,340 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
                       strokeWidth: 2,
                     ),
                   )
-                : const Text(
-                    'තොරතුරු සුරකින්න',
-                    style: TextStyle(
+                : Text(
+                    viewModel.editingDocId != null
+                        ? 'යාවත්කාලීන කරන්න (Update)'
+                        : 'තොරතුරු සුරකින්න',
+                    style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
           ),
+
+          const SizedBox(height: 32),
+
+          // --- DISPLAY ENTERED DATA FIELDS LIST ---
+          _buildEnteredRecordsSection(viewModel),
+
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  /// Displays all already entered data fields for this GN Division
+  Widget _buildEnteredRecordsSection(InfrastructureViewModel viewModel) {
+    if (viewModel.gnDivision == null || viewModel.gnDivision!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.inventory_2_outlined,
+                    color: Color(0xFF1E88E5), size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'දැනට ඇතුළත් කළ දත්ත (Entered Data)',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                ),
+              ],
+            ),
+            if (viewModel.editingDocId != null)
+              TextButton(
+                onPressed: () => _clearForm(viewModel),
+                child: const Text('+ නව වාර්තාවක්',
+                    style: TextStyle(fontSize: 12)),
+              ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: viewModel.gnInfrastructureStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              );
+            }
+
+            final docs = snapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: const Center(
+                  child: Text(
+                    'මෙම වසම සඳහා තවමත් කිසිදු දත්තයක් ඇතුළත් කර නොමැත.',
+                    style: TextStyle(fontSize: 13, color: Colors.grey),
+                  ),
+                ),
+              );
+            }
+
+            return Column(
+              children: docs.map((doc) {
+                final data = doc.data();
+                final isCurrentEditing = viewModel.editingDocId == doc.id;
+                final road = (data['roads_infrastructure'] as Map?) ?? {};
+                final bridge = (data['bridges_infrastructure'] as Map?) ?? {};
+
+                final roadName = (road['road_name'] ?? '').toString();
+                final roadType = (road['road_type'] ?? '').toString();
+                final roadDist =
+                    (road['development_distance'] ?? '').toString();
+                final roadBen =
+                    (road['beneficiaries_count'] ?? '').toString();
+
+                final bridgeName = (bridge['bridge_name'] ?? '').toString();
+                final bridgeType = (bridge['bridge_type'] ?? '').toString();
+                final bridgeCond =
+                    (bridge['current_condition'] ?? '').toString();
+                final bridgeBen =
+                    (bridge['beneficiaries_count'] ?? '').toString();
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: isCurrentEditing
+                        ? const Color(0xFFFFFBEB)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: isCurrentEditing
+                          ? const Color(0xFFF59E0B)
+                          : Colors.grey.shade200,
+                      width: isCurrentEditing ? 1.5 : 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Road Info Tag
+                        if (roadName.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              const Icon(Icons.add_road_rounded,
+                                  size: 18, color: Color(0xFF2563EB)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'මාර්ගය: $roadName ($roadType)',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 24, top: 4),
+                            child: Text(
+                              'දුර: ${roadDist.isNotEmpty ? "$roadDist km" : "-"} • ප්‍රතිලාභීන්: ${roadBen.isNotEmpty ? roadBen : "-"}',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+
+                        // Bridge Info Tag
+                        if (bridgeName.isNotEmpty) ...[
+                          Row(
+                            children: [
+                              const Icon(Icons.architecture_rounded,
+                                  size: 18, color: Color(0xFFD97706)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'පාලම/බෝක්කුව: $bridgeName ($bridgeType)',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.only(left: 24, top: 4),
+                            child: Text(
+                              'තත්ත්වය: ${bridgeCond.isNotEmpty ? bridgeCond : "-"} • ප්‍රතිලාභීන්: ${bridgeBen.isNotEmpty ? bridgeBen : "-"}',
+                              style: TextStyle(
+                                  fontSize: 12, color: Colors.grey.shade600),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+
+                        const Divider(height: 1),
+                        const SizedBox(height: 8),
+
+                        // Action Buttons: Edit / Delete
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () =>
+                                  _populateFormFromDoc(doc.id, data, viewModel),
+                              icon: const Icon(Icons.edit_outlined, size: 16),
+                              label: const Text('සංස්කරණය / Load',
+                                  style: TextStyle(fontSize: 12)),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  color: Colors.redAccent, size: 18),
+                              tooltip: 'Delete',
+                              onPressed: () async {
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (ctx) => AlertDialog(
+                                    title: const Text('දත්තය මකන්නද?'),
+                                    content: const Text(
+                                        'මෙම යටිතල පහසුකම් වාර්තාව ස්ථිරවම මකා දැමීමට ඔබට අවශ්‍යද?'),
+                                    actions: [
+                                      TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, false),
+                                          child: const Text('නැත')),
+                                      FilledButton(
+                                          style: FilledButton.styleFrom(
+                                              backgroundColor:
+                                                  Colors.redAccent),
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, true),
+                                          child: const Text('ඔව්, මකන්න')),
+                                    ],
+                                  ),
+                                );
+                                if (confirm == true) {
+                                  await viewModel.deleteRecord(doc.id);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCollectorLocationCard(InfrastructureViewModel viewModel) {
+    if (viewModel.isLoadingUser) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.blue.shade50,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            SizedBox(width: 12),
+            Text(
+              'පරිශීලක තොරතුරු පූරණය වෙමින් පවතී...',
+              style: TextStyle(fontSize: 12.5, color: Colors.blueGrey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final nic = viewModel.userNic ?? 'හඳුනාගෙන නැත';
+    final name = viewModel.userName ?? '';
+    final gn = viewModel.gnDivision ?? 'වසමක් තෝරා නැත';
+    final la = viewModel.localAuthority ?? 'පළාත් පාලන ආයතනයක් නැත';
+    final district = viewModel.district ?? 'Matara';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0FDF4),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFBBF7D0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.verified_user_rounded,
+                  size: 20, color: Color(0xFF16A34A)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'දත්ත එකතු කරන්නා: $name (ජා.හැ: $nic)',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFF14532D),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined,
+                  size: 18, color: Color(0xFF15803D)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '$district > $la > $gn',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF166534),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
