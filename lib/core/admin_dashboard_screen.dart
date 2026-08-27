@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../data/auth_repository.dart';
-import 'app_theme.dart';
+import 'admin_location_manager_screen.dart';
 
 /// Admin dashboard featuring analytics, member management,
-/// user activation/deactivation, and database explorer.
+/// user activation/deactivation, dropdown field data feeder, and database explorer.
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -30,6 +30,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   int _membersActive = 0;
   int _membersDeactivated = 0;
+  int _localAuthoritiesCount = 0;
 
   // ---------------------------------------------------------------------------
   // Database Explorer / Pagination State
@@ -39,6 +40,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     'survey_responses': 'Collected Data',
     'users': 'Our Members (Users)',
     'voters_2024': 'Members in Our System',
+    'local_authorities': 'Administrative Locations (Dropdown Data)',
   };
 
   String _currentCollectionId = 'users';
@@ -102,7 +104,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (district.contains('matara')) {
           vMatara++;
         } else if (district.contains('galle')) {
-          vGalle++;
+          sGalle++;
         } else if (district.contains('hambantota')) {
           vHambantota++;
         }
@@ -121,6 +123,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       }
 
+      // 4. Local Authorities stats
+      final laSnap = await firestore.collection('local_authorities').get();
+
       if (mounted) {
         setState(() {
           _surveyCount = surveySnap.size;
@@ -129,6 +134,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _votersDistricts = {'Matara': vMatara, 'Galle': vGalle, 'Hambantota': vHambantota};
           _membersActive = active;
           _membersDeactivated = inactive;
+          _localAuthoritiesCount = laSnap.size;
         });
       }
     } catch (_) {
@@ -268,6 +274,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         return ['name', 'email', 'phone', 'nic', 'town', 'district', 'documentId'];
       case 'voters_2024':
         return ['documentId', 'name', 'nic', 'houseNumber'];
+      case 'local_authorities':
+        return ['documentId', 'name_en', 'name_si', 'district_en'];
       default:
         return ['documentId'];
     }
@@ -285,7 +293,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           _buildHeader(),
           Expanded(
-            child: _currentNavIndex == 0 ? _buildDashboardOverview() : _buildDatabaseExplorer(),
+            child: _currentNavIndex == 0
+                ? _buildDashboardOverview()
+                : (_currentNavIndex == 1
+                    ? _buildDatabaseExplorer()
+                    : _buildSettingsView()),
           ),
         ],
       ),
@@ -347,7 +359,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     Icon(Icons.verified_user_rounded, size: 14, color: Colors.white70),
                     SizedBox(width: 4),
                     Text(
-                      'Users & Members Management',
+                      'System Administration',
                       style: TextStyle(
                         color: Colors.white70,
                         fontSize: 12.5,
@@ -386,6 +398,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         padding: const EdgeInsets.fromLTRB(18, 18, 18, 28),
         children: [
           _buildSummaryCards(),
+          const SizedBox(height: 16),
+
+          // Action Card: Feed / Manage Signup Dropdown Field Data
+          _buildDropdownDataManagementCard(),
+
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -420,6 +437,91 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 10),
           _buildRecentUsersFeed(),
+        ],
+      ),
+    );
+  }
+
+  /// Banner Card to navigate to Location Manager & DB Feeder
+  Widget _buildDropdownDataManagementCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E88E5).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFF1E88E5).withOpacity(0.4)),
+            ),
+            child: const Icon(
+              Icons.add_location_alt_rounded,
+              color: Color(0xFF60A5FA),
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Signup Dropdown Data',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Feed and manage Local Authorities & GN Divisions in Firestore (${_localAuthoritiesCount} loaded)',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF1E88E5),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AdminLocationManagerScreen(),
+                ),
+              );
+              _fetchDashboardStatistics();
+            },
+            child: const Text(
+              'Feed / Manage',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
@@ -623,7 +725,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          // Active Pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -660,7 +761,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // Deactivate Pill
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
             decoration: BoxDecoration(
@@ -918,7 +1018,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    // Specialized view for Users with Activate / Deactivate controls
     if (_currentCollectionId == 'users') {
       return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
@@ -927,7 +1026,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    // Generic list for Survey Responses & Voters
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
       itemCount: _documents.length,
@@ -935,7 +1033,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Custom User Card with Activate/Deactivate Toggle and Edit Action
   Widget _buildUserListCard(QueryDocumentSnapshot<Map<String, dynamic>> document) {
     final data = document.data();
     final name = (data['name'] ?? data['fullName'] ?? 'Unnamed User').toString();
@@ -970,7 +1067,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar with online status ring
                 Stack(
                   children: [
                     CircleAvatar(
@@ -1017,7 +1113,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          // Status Badge
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
@@ -1072,10 +1167,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             const SizedBox(height: 12),
             const Divider(height: 1, color: Color(0xFFF1F5F9)),
             const SizedBox(height: 8),
-            // Actions Row: Activate/Deactivate Switch + Edit Button
             Row(
               children: [
-                // Quick Toggle Switch
                 Row(
                   children: [
                     Switch.adaptive(
@@ -1094,7 +1187,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ],
                 ),
                 const Spacer(),
-                // Edit Button
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Color(0xFF2187EA)),
@@ -1143,8 +1235,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildGenericDocumentCard(QueryDocumentSnapshot<Map<String, dynamic>> document) {
     final data = document.data();
-    final title = (data['fullName'] ?? data['name'] ?? data['houseNumber'] ?? document.id).toString();
-    final sub = (data['nic'] ?? data['district'] ?? data['city'] ?? document.id).toString();
+    final title = (data['fullName'] ?? data['name'] ?? data['name_en'] ?? data['houseNumber'] ?? document.id).toString();
+    final sub = (data['nic'] ?? data['district'] ?? data['district_en'] ?? document.id).toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1238,6 +1330,111 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // Tab 3: Settings & Tools
+  // ---------------------------------------------------------------------------
+
+  Widget _buildSettingsView() {
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Administrative Data Tools',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0F2FE),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.alt_route_rounded, color: Color(0xFF0284C7)),
+                ),
+                title: const Text(
+                  'Manage Dropdown Field Data',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Feed and configure Local Authorities & GN Divisions for signup',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AdminLocationManagerScreen(),
+                    ),
+                  );
+                  _fetchDashboardStatistics();
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Account & Session',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFE4E6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.logout_rounded, color: Color(0xFFE11D48)),
+                ),
+                title: const Text(
+                  'Sign Out',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: Color(0xFFE11D48)),
+                ),
+                subtitle: const Text(
+                  'End admin session securely',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                onTap: () => context.read<AuthRepository>().signOut(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildBottomNav() {
     return Container(
       decoration: BoxDecoration(
@@ -1257,7 +1454,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard_rounded), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.manage_accounts_rounded), label: 'Members / Explorer'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings_outlined), label: 'Settings & Tools'),
         ],
       ),
     );
@@ -1289,7 +1486,6 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
   bool _isSaving = false;
   String? _error;
 
-  // Controllers for direct user field editing
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -1335,7 +1531,6 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
         setState(() {
           _draft = _copyMap(data);
 
-          // Populate specialized fields if editing user
           if (widget.collection == 'users') {
             _nameController.text = (data['name'] ?? data['fullName'] ?? '').toString();
             _emailController.text = (data['email'] ?? '').toString();
@@ -1498,7 +1693,6 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
       return _buildDedicatedUserEditor();
     }
 
-    // Fallback editor for other collections
     final draft = _draft!;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
@@ -1518,12 +1712,10 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
     );
   }
 
-  /// Structured and user-friendly form for Editing Users and Activating/Deactivating
   Widget _buildDedicatedUserEditor() {
     return ListView(
       padding: const EdgeInsets.fromLTRB(18, 18, 18, 32),
       children: [
-        // Status Card with Quick Toggle
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1578,7 +1770,6 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
 
         const SizedBox(height: 20),
 
-        // User Details Card Form
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
@@ -1605,7 +1796,6 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
               _buildTextInput(controller: _townController, label: 'Town / City', icon: Icons.location_city_outlined),
               const SizedBox(height: 14),
 
-              // District Dropdown
               DropdownButtonFormField<String>(
                 value: _districtsList.contains(_selectedDistrict) ? _selectedDistrict : _districtsList.first,
                 decoration: InputDecoration(
@@ -1621,7 +1811,6 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
 
               const SizedBox(height: 14),
 
-              // Role Dropdown
               DropdownButtonFormField<String>(
                 value: _rolesList.contains(_selectedRole) ? _selectedRole : _rolesList.first,
                 decoration: InputDecoration(
@@ -1680,7 +1869,7 @@ class _AdminDocumentScreenState extends State<AdminDocumentScreen> {
 }
 
 // -----------------------------------------------------------------------------
-// Generic Dynamic Field Value Editor (For Collections other than Users)
+// Generic Dynamic Field Value Editor
 // -----------------------------------------------------------------------------
 
 class _ValueEditor extends StatelessWidget {

@@ -27,204 +27,28 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
+  bool _isLoadingDropdownData = true;
 
-  // Values to be saved in the database (English)
-  // Hardcoded to Matara as requested
+  // Selected Values to be saved in the database (English)
   final String _selectedDistrictEn = 'Matara';
   String? _selectedLocalAuthorityEn;
   String? _selectedGNEn;
 
-  // Values for UI display (Sinhala)
+  // Selected Values for UI display (Sinhala)
   final String _selectedDistrictSi = 'මාතර';
   String? _selectedLocalAuthoritySi;
   String? _selectedGNSi;
 
- // Hardcoded Local Authorities for Matara District
-final List<Map<String, String>> _localAuthorities = [
-  {'si': 'මාතර මහ නගර සභාව', 'en': 'Matara Municipal Council'},
-  {'si': 'වැලිගම නගර සභාව', 'en': 'Weligama Urban Council'},
-  {'si': 'මාතර ප්‍රාදේශීය සභාව', 'en': 'Matara Pradeshiya Sabha'},
-  {'si': 'වැලිගම ප්‍රාදේශීය සභාව', 'en': 'Weligama Pradeshiya Sabha'},
-  {'si': 'අකුරැස්ස ප්‍රාදේශීය සභාව', 'en': 'Akuressa Pradeshiya Sabha'},
-  {'si': 'අතුරලිය ප්‍රාදේශීය සභාව', 'en': 'Athuraliya Pradeshiya Sabha'},
-  {'si': 'දෙවිනුවර ප්‍රාදේශීය සභාව', 'en': 'Devinuwara Pradeshiya Sabha'},
-  {'si': 'දික්වැල්ල ප්‍රාදේශීය සභාව', 'en': 'Dickwella Pradeshiya Sabha'},
-  {'si': 'හක්මන ප්‍රාදේශීය සභාව', 'en': 'Hakmana Pradeshiya Sabha'},
-  {'si': 'කඹුරුපිටිය ප්‍රාදේශීය සභාව', 'en': 'Kamburupitiya Pradeshiya Sabha'},
-  {'si': 'කිරින්ද පුහුල්වැල්ල ප්‍රාදේශීය සභාව', 'en': 'Kirinda Puhulwella Pradeshiya Sabha'},
-  {'si': 'කොටපොල ප්‍රාදේශීය සභාව', 'en': 'Kotapola Pradeshiya Sabha'},
-  {'si': 'මාලිම්බඩ ප්‍රාදේශීය සභාව', 'en': 'Malimbada Pradeshiya Sabha'},
-  {'si': 'පස්ගොඩ ප්‍රාදේශීය සභාව', 'en': 'Pasgoda Pradeshiya Sabha'},
-  {'si': 'පිටබැද්දර ප්‍රාදේශීය සභාව', 'en': 'Pitabeddara Pradeshiya Sabha'},
-  {'si': 'තිහගොඩ ප්‍රාදේශීය සභාව', 'en': 'Thihagoda Pradeshiya Sabha'},
-];
-
-// Hardcoded GN Divisions based on Local Authority
-final Map<String, List<Map<String, String>>> _gnDivisionsData = {
-  'Weligama Urban Council': [
-    {'si': 'මහ වීදිය (382)', 'en': 'Maha Weediya (382)'},
-    {'si': 'පරණකඩේ (382A)', 'en': 'Paranakade (382A)'},
-    {'si': 'හෙට්ටිවීදිය (382B)', 'en': 'Hettiweediya (382B)'},
-    {'si': 'ගල්බොක්ක නැගෙනහිර (385)', 'en': 'Galbokka East (385)'},
-    {'si': 'අලුත් වීදිය (385A)', 'en': 'Aluthweediya (385A)'},
-    {'si': 'ගල්බොක්ක බටහිර (385B)', 'en': 'Galbokka West (385B)'},
-    {'si': 'වල්ලිවල බටහිර (386A)', 'en': 'Walliwala West (386A)'},
-    {'si': 'වල්ලිවල නැගෙනහිර (386B)', 'en': 'Walliwala East (386B)'},
-    {'si': 'කප්පරතොට දකුණ (386C)', 'en': 'Kapparathota South (386C)'},
-    {'si': 'කප්පරතොට උතුර (386D)', 'en': 'Kapparathota North (386D)'},
-    {'si': 'පැලෑන නැගෙනහිර (387)', 'en': 'Pelena East (387)'},
-    {'si': 'පැලෑන බටහිර (387A)', 'en': 'Pelena West (387A)'},
-    {'si': 'කොහුණුගමුව (389)', 'en': 'Kohunugamuwa (389)'},
-  ],
-  'Matara Municipal Council': [
-    {'si': 'කොටුවේගොඩ (416)', 'en': 'Kotewegoda (416)'},
-    {'si': 'නූපේ (416A)', 'en': 'Nupe (416A)'},
-    {'si': 'ඉසදීන් නගරය (416B)', 'en': 'Isadeen Town (416B)'},
-    {'si': 'උයන්වත්ත (415)', 'en': 'Uyanwatta (415)'},
-    {'si': 'උයන්වත්ත උතුර (415A)', 'en': 'Uyanwatta North (415A)'},
-    {'si': 'උයන්වත්ත දකුණ (415B)', 'en': 'Uyanwatta South (415B)'},
-    {'si': 'පොල්හේන (417)', 'en': 'Polhena (417)'},
-    {'si': 'වල්ගම (418)', 'en': 'Walgama (418)'},
-    {'si': 'වල්ගම උතුර (418A)', 'en': 'Walgama North (418A)'},
-    {'si': 'වල්ගම මැද (418B)', 'en': 'Walgama Meda (418B)'},
-    {'si': 'වල්ගම දකුණ (418C)', 'en': 'Walgama South (418C)'},
-    {'si': 'වෙලේගොඩ නැගෙනහිර (419A)', 'en': 'Welegoda East (419A)'},
-    {'si': 'වෙලේගොඩ බටහිර (419B)', 'en': 'Welegoda West (419B)'},
-    {'si': 'හිත්බැටිය නැගෙනහිර (420A)', 'en': 'Hiththetiya East (420A)'},
-    {'si': 'හිත්බැටිය මධ්‍යම (420B)', 'en': 'Hiththetiya Central (420B)'},
-    {'si': 'හිත්බැටිය බටහිර (420C)', 'en': 'Hiththetiya West (420C)'},
-    {'si': 'සුදර්ශී පෙදෙස (420D)', 'en': 'Sudarshi Place (420D)'},
-    {'si': 'වල්පල නැගෙනහිර (414A)', 'en': 'Walpala East (414A)'},
-    {'si': 'වල්පල බටහිර (414B)', 'en': 'Walpala West (414B)'},
-    {'si': 'වැලිවේරිය නැගෙනහිර (413A)', 'en': 'Weliweriya East (413A)'},
-    {'si': 'වැලිවේරිය බටහිර (413B)', 'en': 'Weliweriya West (413B)'},
-    {'si': 'තුඩාව (412)', 'en': 'Tudawa (412)'},
-    {'si': 'මැද්දවත්ත (423)', 'en': 'Meddawatta (423)'},
-  ],
-  'Matara Pradeshiya Sabha': [
-    {'si': 'කැකණදුර (420)', 'en': 'Kekanadura (420)'},
-    {'si': 'තලල්ල උතුර (421A)', 'en': 'Talalla North (421A)'},
-    {'si': 'තලල්ල දකුණ (421B)', 'en': 'Talalla South (421B)'},
-    {'si': 'නාඩියගහවත්ත (422)', 'en': 'Nadiyagahawatta (422)'},
-    {'si': 'දියගහ (424)', 'en': 'Diyagaha (424)'},
-    {'si': 'මකවිට (425)', 'en': 'Makavita (425)'},
-    {'si': 'කොකාවල (426)', 'en': 'Kokawala (426)'},
-    {'si': 'කුඹල්ගම (427)', 'en': 'Kubalgama (427)'},
-    {'si': 'වෙහෙරහේන (428)', 'en': 'Weherahena (428)'},
-    {'si': 'ගන්දර (429)', 'en': 'Gandara (429)'},
-  ],
-  'Weligama Pradeshiya Sabha': [
-    {'si': 'මිරිස්ස දකුණ (391)', 'en': 'Mirissa South (391)'},
-    {'si': 'මිරිස්ස උතුර (392)', 'en': 'Mirissa North (392)'},
-    {'si': 'කඹුරුගමුව උතුර (408)', 'en': 'Kamburugamuwa North (408)'},
-    {'si': 'කඹුරුගමුව දකුණ (409)', 'en': 'Kamburugamuwa South (409)'},
-    {'si': 'දෙණිපිටිය උතුර (395)', 'en': 'Denipitiya North (395)'},
-    {'si': 'දෙණිපිටිය දකුණ (396)', 'en': 'Denipitiya South (396)'},
-    {'si': 'වැලිපිටිය (398)', 'en': 'Welipitiya (398)'},
-    {'si': 'පැලෑන උතුර (388)', 'en': 'Pelena North (388)'},
-    {'si': 'මිද්දෙණිය (399)', 'en': 'Middeniya (399)'},
-  ],
-  'Akuressa Pradeshiya Sabha': [
-    {'si': 'අකුරැස්ස (430)', 'en': 'Akuressa (430)'},
-    {'si': 'මලිදූව (431)', 'en': 'Maliduwa (431)'},
-    {'si': 'ඉඹුල්ගොඩ (432)', 'en': 'Imbulgoda (432)'},
-    {'si': 'පොරඹ (433)', 'en': 'Poramba (433)'},
-    {'si': 'හේනේගම බටහිර (434)', 'en': 'Henegama West (434)'},
-    {'si': 'මිනීපෙගොඩ (435)', 'en': 'Minipegoda (435)'},
-    {'si': 'මාරඹ (436)', 'en': 'Maramba (436)'},
-    {'si': 'තලාගහගම (437)', 'en': 'Thalahagama (437)'},
-    {'si': 'උරුමුත්ත (438)', 'en': 'Urumutta (438)'},
-    {'si': 'හුලන්දාව (439)', 'en': 'Hulandawa (439)'},
-    {'si': 'ලේනම (440)', 'en': 'Lenama (440)'},
-    {'si': 'බෝපගොඩ (441)', 'en': 'Bopagoda (441)'},
-  ],
-  'Athuraliya Pradeshiya Sabha': [
-    {'si': 'අතුරලිය (520)', 'en': 'Athuraliya (520)'},
-    {'si': 'විල්පිට (521)', 'en': 'Wilpita (521)'},
-    {'si': 'බාලකාවල (522)', 'en': 'Balakawala (522)'},
-    {'si': 'පරදූව (523)', 'en': 'Paraduwa (523)'},
-    {'si': 'ඇල්ගිරිය (524)', 'en': 'Elgiriya (524)'},
-    {'si': 'මාරගොඩ (525)', 'en': 'Maragoda (525)'},
-  ],
-  'Devinuwara Pradeshiya Sabha': [
-    {'si': 'දෙවිනුවර උතුර (480)', 'en': 'Devinuwara North (480)'},
-    {'si': 'දෙවිනුවර දකුණ (481)', 'en': 'Devinuwara South (481)'},
-    {'si': 'දෙවිනුවර නුගේගොඩ (482)', 'en': 'Devinuwara Nugegoda (482)'},
-    {'si': 'සිංහාසන (483)', 'en': 'Sinhasana (483)'},
-    {'si': 'කපුගම මධ්‍යම (484)', 'en': 'Kapugama Central (484)'},
-    {'si': 'කපුගම උතුර (485)', 'en': 'Kapugama North (485)'},
-    {'si': 'කොට්ටගොඩ (486)', 'en': 'Kottagoda (486)'},
-    {'si': 'තල්පාවිල (487)', 'en': 'Thalpawila (487)'},
-  ],
-  'Dickwella Pradeshiya Sabha': [
-    {'si': 'දික්වැල්ල උතුර (450)', 'en': 'Dickwella North (450)'},
-    {'si': 'දික්වැල්ල දකුණ (451)', 'en': 'Dickwella South (451)'},
-    {'si': 'පෙහෙබිය (452)', 'en': 'Pehebiya (452)'},
-    {'si': 'බතිගම උතුර (453)', 'en': 'Batigama North (453)'},
-    {'si': 'බතිගම දකුණ (454)', 'en': 'Batigama South (454)'},
-    {'si': 'වලස්ගල බටහිර (455)', 'en': 'Walasgala West (455)'},
-    {'si': 'වලස්ගල නැගෙනහිර (456)', 'en': 'Walasgala East (456)'},
-    {'si': 'බෙලිහින්න (457)', 'en': 'Belihinna (457)'},
-    {'si': 'රාදම්පොල (458)', 'en': 'Radampola (458)'},
-    {'si': 'වෙහෙල්ල (459)', 'en': 'Wehella (459)'},
-    {'si': 'උරුගමුව (460)', 'en': 'Urugamuwa (460)'},
-  ],
-  'Hakmana Pradeshiya Sabha': [
-    {'si': 'හක්මන (470)', 'en': 'Hakmana (470)'},
-    {'si': 'දෙනගම (471)', 'en': 'Denagama (471)'},
-    {'si': 'ලැල්පේ (472)', 'en': 'Lalpe (472)'},
-    {'si': 'හෙට්ටියාවල (473)', 'en': 'Hettiyawala (473)'},
-    {'si': 'යටියන (474)', 'en': 'Yatiyana (474)'},
-    {'si': 'මීඇල්ල (475)', 'en': 'Miella (475)'},
-    {'si': 'කොළඹගේආර (476)', 'en': 'Kolambageara (476)'},
-  ],
-  'Kamburupitiya Pradeshiya Sabha': [
-    {'si': 'කඹුරුපිටිය (490)', 'en': 'Kamburupitiya (490)'},
-    {'si': 'අකුරුගොඩ (491)', 'en': 'Akurugoda (491)'},
-    {'si': 'හොරගොඩ (492)', 'en': 'Horagoda (492)'},
-    {'si': 'කිරිමැටිමුල්ල (493)', 'en': 'Kirimetimulla (493)'},
-    {'si': 'මාපලාන (494)', 'en': 'Mapalana (494)'},
-    {'si': 'තඹලගම (495)', 'en': 'Thambalagama (495)'},
-  ],
-  'Kirinda Puhulwella Pradeshiya Sabha': [
-    {'si': 'කිරින්ද (530)', 'en': 'Kirinda (530)'},
-    {'si': 'පුහුල්වැල්ල (531)', 'en': 'Puhulwella (531)'},
-    {'si': 'බටුවිට (532)', 'en': 'Batuvita (532)'},
-    {'si': 'විද්‍යානිකේත (533)', 'en': 'Vidyaniketha (533)'},
-  ],
-  'Kotapola Pradeshiya Sabha': [
-    {'si': 'කොටපොල (540)', 'en': 'Kotapola (540)'},
-    {'si': 'දෙනියාය (541)', 'en': 'Deniyaya (541)'},
-    {'si': 'මොරවක (542)', 'en': 'Morawaka (542)'},
-    {'si': 'කොළවෙනිගම (543)', 'en': 'Kolawenigama (543)'},
-  ],
-  'Malimbada Pradeshiya Sabha': [
-    {'si': 'මාලිම්බඩ උතුර (510)', 'en': 'Malimbada North (510)'},
-    {'si': 'මාලිම්බඩ දකුණ (511)', 'en': 'Malimbada South (511)'},
-    {'si': 'තෙලිජ්ජවිල (512)', 'en': 'Thelijjawila (512)'},
-    {'si': 'සුල්තානාගොඩ (513)', 'en': 'Sulthanagoda (513)'},
-    {'si': 'කෙටන්විල (514)', 'en': 'Ketanwila (514)'},
-  ],
-  'Pasgoda Pradeshiya Sabha': [
-    {'si': 'පස්ගොඩ (550)', 'en': 'Pasgoda (550)'},
-    {'si': 'රොටුඹ (552)', 'en': 'Rotumba (552)'},
-    {'si': 'බෙංගමුව (553)', 'en': 'Bengamuwa (553)'},
-  ],
-  'Pitabeddara Pradeshiya Sabha': [
-    {'si': 'පිටබැද්දර (560)', 'en': 'Pitabeddara (560)'},
-    {'si': 'කලුවල (561)', 'en': 'Kaluwala (561)'},
-    {'si': 'සියඹලාගොඩ (562)', 'en': 'Siyambalagoda (562)'},
-    {'si': 'ඇලකන්ද (563)', 'en': 'Elakanda (563)'},
-  ],
-  'Thihagoda Pradeshiya Sabha': [
-    {'si': 'තිහගොඩ (500)', 'en': 'Thihagoda (500)'},
-    {'si': 'කපුවත්ත (501)', 'en': 'Kapuwatta (501)'},
-    {'si': 'නායිම්බල (502)', 'en': 'Naimbala (502)'},
-    {'si': 'පාලටුව (503)', 'en': 'Palatuwa (503)'},
-    {'si': 'යටියන නැගෙනහිර (504)', 'en': 'Yatiyana East (504)'},
-  ],
-};
+  // Dynamically loaded from Cloud Firestore
+  List<Map<String, String>> _localAuthorities = [];
+  Map<String, List<Map<String, String>>> _gnDivisionsData = {};
   List<Map<String, String>> _currentGNDivisions = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchAdministrativeDataFromFirestore();
+  }
 
   @override
   void dispose() {
@@ -235,6 +59,71 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  /// Fetches Local Authorities and GN Divisions dynamically from Firestore
+  Future<void> _fetchAdministrativeDataFromFirestore() async {
+    setState(() => _isLoadingDropdownData = true);
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('local_authorities')
+          .where('district_en', isEqualTo: _selectedDistrictEn)
+          .get();
+
+      final List<Map<String, String>> laList = [];
+      final Map<String, List<Map<String, String>>> gnMap = {};
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        final String enName = (data['name_en'] ?? '').toString();
+        final String siName = (data['name_si'] ?? '').toString();
+
+        if (enName.isNotEmpty) {
+          laList.add({
+            'en': enName,
+            'si': siName.isNotEmpty ? siName : enName,
+          });
+
+          final rawGNDivisions = data['gn_divisions'];
+          if (rawGNDivisions is List) {
+            final List<Map<String, String>> parsedGN = [];
+            for (var item in rawGNDivisions) {
+              if (item is Map) {
+                parsedGN.add({
+                  'en': (item['en'] ?? '').toString(),
+                  'si': (item['si'] ?? item['en'] ?? '').toString(),
+                });
+              }
+            }
+            gnMap[enName] = parsedGN;
+          } else {
+            gnMap[enName] = [];
+          }
+        }
+      }
+
+      // Sort alphabetically
+      laList.sort((a, b) => a['si']!.compareTo(b['si']!));
+
+      if (mounted) {
+        setState(() {
+          _localAuthorities = laList;
+          _gnDivisionsData = gnMap;
+          _isLoadingDropdownData = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingDropdownData = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'දත්ත පූරණය කිරීමේ දෝෂයක් මතු විය: $e',
+            ),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _signUpUser() async {
@@ -277,18 +166,18 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
           .collection('users')
           .doc(userCredential.user!.uid)
           .set({
-            'uid': userCredential.user!.uid,
-            'name': name,
-            'nic': nic,
-            'email': email,
-            'phone': phone,
-            'district': _selectedDistrictEn,
-            'local_authority': _selectedLocalAuthorityEn, // Added level
-            'gn_division': _selectedGNEn, // Added bottom level
-            'role': 'data collector',
-            'createdAt': DateTime.now(),
-            'isActive': false,
-          });
+        'uid': userCredential.user!.uid,
+        'name': name,
+        'nic': nic,
+        'email': email,
+        'phone': phone,
+        'district': _selectedDistrictEn,
+        'local_authority': _selectedLocalAuthorityEn,
+        'gn_division': _selectedGNEn,
+        'role': 'data collector',
+        'createdAt': DateTime.now(),
+        'isActive': false,
+      });
 
       await FirebaseAuth.instance.signOut();
 
@@ -347,7 +236,6 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
     }
   }
 
-  // Basic Text Field Builder
   Widget _buildTextField(
     String label,
     String hint,
@@ -415,7 +303,6 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
     );
   }
 
-  // NEW: Searchable Dropdown Field Builder using Autocomplete
   Widget _buildSearchableField({
     required String label,
     required String hint,
@@ -442,14 +329,18 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
             if (textEditingValue.text.isEmpty) {
               return options;
             }
-            // Enable search by filtering options
             return options.where((Map<String, String> option) {
-              return option['si']!
+              final siMatch = option['si']!
                   .toLowerCase()
                   .contains(textEditingValue.text.toLowerCase());
+              final enMatch = option['en']!
+                  .toLowerCase()
+                  .contains(textEditingValue.text.toLowerCase());
+              return siMatch || enMatch;
             });
           },
-          displayStringForOption: (Map<String, String> option) => option['si']!,
+          displayStringForOption: (Map<String, String> option) =>
+              option['si']!,
           onSelected: onSelected,
           fieldViewBuilder: (
             BuildContext context,
@@ -463,9 +354,11 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
               enabled: enabled,
               decoration: InputDecoration(
                 hintText: hint,
-                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                hintStyle:
+                    TextStyle(color: Colors.grey.shade400, fontSize: 13),
                 filled: true,
-                fillColor: enabled ? Colors.grey.shade100 : Colors.grey.shade200,
+                fillColor:
+                    enabled ? Colors.grey.shade100 : Colors.grey.shade200,
                 suffixIcon: Icon(icon, color: Colors.lightBlue.shade200),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(30),
@@ -498,6 +391,10 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
                         title: Text(
                           option['si']!,
                           style: const TextStyle(fontFamily: 'UNSamantha'),
+                        ),
+                        subtitle: Text(
+                          option['en']!,
+                          style: const TextStyle(fontSize: 11),
                         ),
                         onTap: () {
                           onSelected(option);
@@ -544,39 +441,57 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
               ),
               const SizedBox(height: 24),
 
-              _buildTextField('නම', 'ඔබගේ නම', Icons.person_outline, _nameController),
-              _buildTextField('ජා.හැ. අංකය', 'ජා.හැ. අංකය', Icons.badge_outlined, _nicController),
-              _buildTextField('ඊමේල්', 'ඊමේල් ලිපිනය', Icons.email_outlined, _emailController),
-              _buildTextField('දුරකථන', 'දුරකථන අංකය', Icons.phone_in_talk_outlined, _phoneController),
+              _buildTextField(
+                  'නම', 'ඔබගේ නම', Icons.person_outline, _nameController),
+              _buildTextField(
+                  'ජා.හැ. අංකය', 'ජා.හැ. අංකය', Icons.badge_outlined, _nicController),
+              _buildTextField(
+                  'ඊමේල්', 'ඊමේල් ලිපිනය', Icons.email_outlined, _emailController),
+              _buildTextField(
+                  'දුරකථන', 'දුරකථන අංකය', Icons.phone_in_talk_outlined, _phoneController),
 
-              // Hardcoded District Field (Read-only)
+              // District Field
               _buildTextField(
                 'දිස්ත්‍රික්කය',
                 'මාතර',
                 Icons.location_city_outlined,
-                TextEditingController(text: 'මාතර (Matara)'),
+                TextEditingController(text: 'මාතර ($_selectedDistrictEn)'),
                 readOnly: true,
               ),
 
-              // Searchable Local Authority (Pradeshiya Sabha/Municipal)
-              _buildSearchableField(
-                label: 'පළාත් පාලන ආයතනය (සොයන්න)',
-                hint: 'ප්‍රාදේශීය/නගර සභාව ටයිප් කර තෝරන්න',
-                icon: Icons.account_balance_outlined,
-                options: _localAuthorities,
-                onSelected: (selected) {
-                  setState(() {
-                    _selectedLocalAuthoritySi = selected['si'];
-                    _selectedLocalAuthorityEn = selected['en'];
-                    // Reset GN Division when Local Authority changes
-                    _selectedGNSi = null;
-                    _selectedGNEn = null;
-                    _currentGNDivisions = _gnDivisionsData[_selectedLocalAuthorityEn!] ?? [];
-                  });
-                },
-              ),
+              // Searchable Local Authority (Loaded from DB)
+              if (_isLoadingDropdownData)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Center(
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  ),
+                )
+              else
+                _buildSearchableField(
+                  label: 'පළාත් පාලන ආයතනය (සොයන්න)',
+                  hint: _localAuthorities.isEmpty
+                      ? 'පළාත් පාලන ආයතන දත්ත නොමැත (Admin විසින් ඇතුළත් කළ යුතුය)'
+                      : 'ප්‍රාදේශීය/නගර සභාව ටයිප් කර තෝරන්න',
+                  icon: Icons.account_balance_outlined,
+                  options: _localAuthorities,
+                  onSelected: (selected) {
+                    setState(() {
+                      _selectedLocalAuthoritySi = selected['si'];
+                      _selectedLocalAuthorityEn = selected['en'];
+                      _selectedGNSi = null;
+                      _selectedGNEn = null;
+                      _currentGNDivisions =
+                          _gnDivisionsData[_selectedLocalAuthorityEn!] ?? [];
+                    });
+                  },
+                ),
 
-              // Searchable GN Division
+              // Searchable GN Division (Filtered from DB)
               _buildSearchableField(
                 label: 'ග්‍රාම නිලධාරී වසම (සොයන්න)',
                 hint: _selectedLocalAuthoritySi == null
@@ -593,8 +508,20 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
                 },
               ),
 
-              _buildTextField('මුරපදය', 'මුරපදය', Icons.lock_outline, _passwordController, isPassword: true),
-              _buildTextField('මුරපදය නැවත', 'මුරපදය', Icons.lock_outline, _confirmPasswordController, isConfirmPassword: true),
+              _buildTextField(
+                'මුරපදය',
+                'මුරපදය',
+                Icons.lock_outline,
+                _passwordController,
+                isPassword: true,
+              ),
+              _buildTextField(
+                'මුරපදය නැවත',
+                'මුරපදය',
+                Icons.lock_outline,
+                _confirmPasswordController,
+                isConfirmPassword: true,
+              ),
 
               const SizedBox(height: 24),
 
@@ -644,12 +571,17 @@ final Map<String, List<Map<String, String>>> _gnDivisionsData = {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text('ගිණුමක් සාදා තිබේද? ', style: TextStyle(fontSize: 12)),
+                  const Text('ගිණුමක් සාදා තිබේද? ',
+                      style: TextStyle(fontSize: 12)),
                   GestureDetector(
                     onTap: () => Navigator.pop(context),
                     child: const Text(
                       'ලොග් වන්න',
-                      style: TextStyle(fontSize: 12, color: Colors.lightBlue, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.lightBlue,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
