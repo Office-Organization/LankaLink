@@ -1,9 +1,32 @@
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class AgricultureViewModel extends ChangeNotifier {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  bool _isLoadingUser = true;
+  bool get isLoadingUser => _isLoadingUser;
+
   bool _isSaving = false;
   bool get isSaving => _isSaving;
+
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  // Active editing document ID
+  String? editingDocId;
+
+  // Logged-in User Profile & Location Data
+  String? userId;
+  String? userNic;
+  String? userName;
+  String? userEmail;
+  String? userPhone;
+  String? district;
+  String? localAuthority;
+  String? gnDivision;
 
   // Dropdown 1: Development Category
   String? selectedDevelopmentCategory;
@@ -22,8 +45,53 @@ class AgricultureViewModel extends ChangeNotifier {
     'නව ඉදිකිරීම',
   ];
 
-  // Location Coordinate (Map Point placeholder)
+  // Location Coordinate (Map Point)
   String? selectedLocationCoordinates;
+
+  AgricultureViewModel() {
+    _loadCurrentUserProfile();
+  }
+
+  /// Real-time stream of all agriculture records entered for this GN division
+  Stream<QuerySnapshot<Map<String, dynamic>>>? get gnAgricultureStream {
+    if (gnDivision == null || gnDivision!.isEmpty) return null;
+    return _firestore
+        .collection('agriculture_data')
+        .where('gn_division', isEqualTo: gnDivision)
+        .snapshots();
+  }
+
+  /// Fetches the logged-in user profile from Firestore
+  Future<void> _loadCurrentUserProfile() async {
+    _isLoadingUser = true;
+    notifyListeners();
+
+    try {
+      final User? currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        userId = currentUser.uid;
+        userEmail = currentUser.email;
+
+        final DocumentSnapshot<Map<String, dynamic>> userDoc =
+            await _firestore.collection('users').doc(currentUser.uid).get();
+
+        if (userDoc.exists && userDoc.data() != null) {
+          final data = userDoc.data()!;
+          userNic = (data['nic'] ?? '').toString();
+          userName = (data['name'] ?? data['fullName'] ?? '').toString();
+          userPhone = (data['phone'] ?? '').toString();
+          district = (data['district'] ?? 'Matara').toString();
+          localAuthority = (data['local_authority'] ?? '').toString();
+          gnDivision = (data['gn_division'] ?? '').toString();
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading user profile: $e");
+    } finally {
+      _isLoadingUser = false;
+      notifyListeners();
+    }
+  }
 
   void updateDevelopmentCategory(String? category) {
     selectedDevelopmentCategory = category;
@@ -35,56 +103,157 @@ class AgricultureViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setLocationCoordinates(String coordinates) {
+  void setLocationCoordinates(String? coordinates) {
     selectedLocationCoordinates = coordinates;
     notifyListeners();
   }
 
+  void setEditingDocId(String? id) {
+    editingDocId = id;
+    notifyListeners();
+  }
+
+  void clearEditing() {
+    editingDocId = null;
+    selectedDevelopmentCategory = null;
+    selectedDevelopmentType = null;
+    selectedLocationCoordinates = null;
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Checks duplicates and saves/updates data in Cloud Firestore.
   Future<bool> saveDataAndProceed({
     required String locationName,
     required String beneficiariesCount,
   }) async {
+    _errorMessage = null;
+
+    if (_isLoadingUser) {
+      _errorMessage = 'පරිශීලක තොරතුරු පූරණය වෙමින් පවතී. කරුණාකර රැඳී සිටින්න.';
+      notifyListeners();
+      return false;
+    }
+
+    if (userId == null || userNic == null || userNic!.isEmpty) {
+      _errorMessage = 'පරිශීලක ගිණුම හඳුනාගත නොහැක. කරුණාකර නැවත ලොග් වන්න.';
+      notifyListeners();
+      return false;
+    }
+
+    if (gnDivision == null || gnDivision!.isEmpty) {
+      _errorMessage = 'ඔබගේ ගිණුමට ග්‍රාම නිලධාරී වසමක් අනුයුක්ත කර නොමැත.';
+      notifyListeners();
+      return false;
+    }
+
+    if (locationName.isEmpty) {
+      _errorMessage = 'කරුණාකර අවශ්‍ය ස්ථානයේ නම ඇතුළත් කරන්න.';
+      notifyListeners();
+      return false;
+    }
+
     _isSaving = true;
     notifyListeners();
 
-    const String currentUserIdentifier = "981234567V";
-    final String currentTimestamp = DateTime.now().toIso8601String();
-
-    final Map<String, dynamic> dataToSave = {
-      "primary_user_id": currentUserIdentifier,
-      "added_by": currentUserIdentifier,
-      "last_edited_by": currentUserIdentifier,
-      "created_at_timestamp": currentTimestamp,
-      "updated_at_timestamp": currentTimestamp,
-      "agriculture_infrastructure": {
-        "development_category": selectedDevelopmentCategory ?? "",
-        "development_type": selectedDevelopmentType ?? "",
-        "location_name": locationName,
-        "map_coordinates": selectedLocationCoordinates ?? "",
-        "beneficiaries_count": beneficiariesCount,
-      },
-      "edit_logs": [
-        {
-          "action": "CREATED",
-          "user": currentUserIdentifier,
-          "timestamp": currentTimestamp,
-        }
-      ]
-    };
-
     try {
-      debugPrint("Saving Agriculture Data: $dataToSave");
-      // Simulating backend delay
-      await Future.delayed(const Duration(seconds: 1));
-      
+      final String locNorm = locationName.toLowerCase().trim();
+
+      // --- DUPLICATE CHECK (For new entries or other documents) ---
+      if (locNorm.isNotEmpty) {
+        final existingQuery = await _firestore
+            .collection('agriculture_data')
+            .where('gn_division', isEqualTo: gnDivision)
+            .where('agriculture_infrastructure.location_name_normalized',
+                isEqualTo: locNorm)
+            .limit(1)
+            .get();
+
+        if (existingQuery.docs.isNotEmpty) {
+          final foundDocId = existingQuery.docs.first.id;
+          if (editingDocId == null || editingDocId != foundDocId) {
+            _errorMessage =
+                'දෝෂයකි: "$locationName" ස්ථානය "$gnDivision" වසම තුළ දැනටමත් ලියාපදිංචි කර ඇත.';
+            _isSaving = false;
+            notifyListeners();
+            return false;
+          }
+        }
+      }
+
+      final currentTimestamp = DateTime.now().toIso8601String();
+
+      final Map<String, dynamic> dataToSave = {
+        "collector_uid": userId,
+        "collector_nic": userNic,
+        "collector_name": userName ?? '',
+        "collector_email": userEmail ?? '',
+        "collector_phone": userPhone ?? '',
+        "district": district ?? 'Matara',
+        "local_authority": localAuthority ?? '',
+        "gn_division": gnDivision ?? '',
+        "updated_at": FieldValue.serverTimestamp(),
+        "agriculture_infrastructure": {
+          "development_category": selectedDevelopmentCategory ?? "",
+          "development_type": selectedDevelopmentType ?? "",
+          "location_name": locationName,
+          "location_name_normalized": locNorm,
+          "map_coordinates": selectedLocationCoordinates ?? "",
+          "beneficiaries_count": beneficiariesCount,
+        },
+      };
+
+      if (editingDocId != null) {
+        // UPDATE existing document
+        dataToSave["edit_logs"] = FieldValue.arrayUnion([
+          {
+            "action": "UPDATED",
+            "user_uid": userId,
+            "user_nic": userNic,
+            "user_name": userName ?? '',
+            "timestamp": currentTimestamp,
+          }
+        ]);
+        await _firestore
+            .collection('agriculture_data')
+            .doc(editingDocId)
+            .update(dataToSave);
+      } else {
+        // CREATE new document
+        dataToSave["created_at_timestamp"] = currentTimestamp;
+        dataToSave["created_at"] = FieldValue.serverTimestamp();
+        dataToSave["edit_logs"] = [
+          {
+            "action": "CREATED",
+            "user_uid": userId,
+            "user_nic": userNic,
+            "user_name": userName ?? '',
+            "timestamp": currentTimestamp,
+          }
+        ];
+        await _firestore.collection('agriculture_data').add(dataToSave);
+      }
+
       _isSaving = false;
       notifyListeners();
       return true;
     } catch (e) {
-      debugPrint("Error saving agriculture data: $e");
+      _errorMessage = 'දත්ත සුරැකීමේදී දෝෂයක් මතු විය: $e';
       _isSaving = false;
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Deletes a record from Firestore
+  Future<void> deleteRecord(String docId) async {
+    try {
+      await _firestore.collection('agriculture_data').doc(docId).delete();
+      if (editingDocId == docId) {
+        clearEditing();
+      }
+    } catch (e) {
+      debugPrint("Error deleting document: $e");
     }
   }
 }

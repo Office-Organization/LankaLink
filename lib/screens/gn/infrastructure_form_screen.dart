@@ -37,7 +37,30 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
   final _bridgeBeneficiariesCtrl = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    // Add listeners so the button dynamically changes between "Save" and "Next" as user types
+    _roadNameCtrl.addListener(_onFormFieldChanged);
+    _roadDistanceCtrl.addListener(_onFormFieldChanged);
+    _roadBeneficiariesCtrl.addListener(_onFormFieldChanged);
+    _bridgeNameCtrl.addListener(_onFormFieldChanged);
+    _bridgeConditionCtrl.addListener(_onFormFieldChanged);
+    _bridgeBeneficiariesCtrl.addListener(_onFormFieldChanged);
+  }
+
+  void _onFormFieldChanged() {
+    setState(() {});
+  }
+
+  @override
   void dispose() {
+    _roadNameCtrl.removeListener(_onFormFieldChanged);
+    _roadDistanceCtrl.removeListener(_onFormFieldChanged);
+    _roadBeneficiariesCtrl.removeListener(_onFormFieldChanged);
+    _bridgeNameCtrl.removeListener(_onFormFieldChanged);
+    _bridgeConditionCtrl.removeListener(_onFormFieldChanged);
+    _bridgeBeneficiariesCtrl.removeListener(_onFormFieldChanged);
+
     _roadNameCtrl.dispose();
     _roadDistanceCtrl.dispose();
     _roadBeneficiariesCtrl.dispose();
@@ -45,6 +68,18 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
     _bridgeConditionCtrl.dispose();
     _bridgeBeneficiariesCtrl.dispose();
     super.dispose();
+  }
+
+  /// Checks if all form input fields and dropdowns are empty / null
+  bool _isFormEmpty(InfrastructureViewModel vm) {
+    return _roadNameCtrl.text.trim().isEmpty &&
+        _roadDistanceCtrl.text.trim().isEmpty &&
+        _roadBeneficiariesCtrl.text.trim().isEmpty &&
+        _bridgeNameCtrl.text.trim().isEmpty &&
+        _bridgeConditionCtrl.text.trim().isEmpty &&
+        _bridgeBeneficiariesCtrl.text.trim().isEmpty &&
+        vm.selectedRoadType == null &&
+        vm.selectedBridgeType == null;
   }
 
   void _populateFormFromDoc(
@@ -94,9 +129,18 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
     vm.clearEditing();
   }
 
-  void _handleSave(BuildContext context) async {
-    final viewModel = context.read<InfrastructureViewModel>();
+  void _handleButtonAction(
+      BuildContext context, InfrastructureViewModel viewModel) async {
+    // 1. IF FORM IS NULL / EMPTY: Simply proceed to the next form
+    if (_isFormEmpty(viewModel)) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AgricultureFormScreen()),
+      );
+      return;
+    }
 
+    // 2. IF USER FEED DATA: Save / Update in Firestore and proceed
     final bool success = await viewModel.saveDataAndProceed(
       roadName: _roadNameCtrl.text.trim(),
       roadDistance: _roadDistanceCtrl.text.trim(),
@@ -137,201 +181,219 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<InfrastructureViewModel>();
+    final bool isEmpty = _isFormEmpty(viewModel);
 
     return AppScreen(
       title: 'යටිතල පහසුකම්',
-      child: ListView(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        children: [
-          // Collector Location Card
-          _buildCollectorLocationCard(viewModel),
-          const SizedBox(height: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Collector Location Card
+            _buildCollectorLocationCard(viewModel),
+            const SizedBox(height: 16),
 
-          // Active Edit Mode Banner (If editing)
-          if (viewModel.editingDocId != null) ...[
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFCD34D)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.edit_note_rounded,
-                      color: Color(0xFFD97706)),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'දැනටමත් ඇතුළත් කළ දත්ත සංස්කරණය කරමින් පවතී.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12.5,
-                        color: Color(0xFF92400E),
+            // Active Edit Mode Banner
+            if (viewModel.editingDocId != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF3C7),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFCD34D)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit_note_rounded,
+                        color: Color(0xFFD97706)),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        'දැනටමත් ඇතුළත් කළ දත්ත සංස්කරණය කරමින් පවතී.',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12.5,
+                          color: Color(0xFF92400E),
+                        ),
                       ),
                     ),
+                    TextButton(
+                      onPressed: () => _clearForm(viewModel),
+                      child: const Text('අලුත් එකක් (New)',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // Roads Section
+            _buildCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '01. මාර්ග සංවර්ධනය',
+                    style: TextStyle(
+                      fontFamily: 'UNSamantha',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black87,
+                    ),
                   ),
-                  TextButton(
-                    onPressed: () => _clearForm(viewModel),
-                    child: const Text('අලුත් එකක් (New)',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'මාර්ග සංවර්ධන කටයුතු පිළිබඳ විස්තර මෙහි ඇතුළත් කරන්න.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 24),
+                  _buildInputField(
+                    label: 'මාර්ගයේ නම:',
+                    hint: 'මාර්ගයේ නම ඇතුළත් කරන්න',
+                    controller: _roadNameCtrl,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildDropdownField(
+                    label: 'මාර්ග වර්ගය:',
+                    hint: 'තෝරන්න',
+                    value: viewModel.selectedRoadType,
+                    items: viewModel.roadTypes,
+                    onChanged: (val) => viewModel.updateRoadType(val),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildInputField(
+                    label: 'සංවර්ධනය කළ යුතු දුර (km):',
+                    hint: '0.0',
+                    controller: _roadDistanceCtrl,
+                    isNumber: true,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildInputField(
+                    label: 'ප්‍රතිලාභීන් ගණන:',
+                    hint: '0000',
+                    controller: _roadBeneficiariesCtrl,
+                    isNumber: true,
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-          ],
+            const SizedBox(height: 24),
 
-          // Roads Section
-          _buildCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '01. මාර්ග සංවර්ධනය',
-                  style: TextStyle(
-                    fontFamily: 'UNSamantha',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black87,
+            // Bridges Section
+            _buildCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '02. පාලම් හා බෝක්කු',
+                    style: TextStyle(
+                      fontFamily: 'UNSamantha',
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'මාර්ග සංවර්ධන කටයුතු පිළිබඳ විස්තර මෙහි ඇතුළත් කරන්න.',
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-                const SizedBox(height: 24),
-                _buildInputField(
-                  label: 'මාර්ගයේ නම:',
-                  hint: 'මාර්ගයේ නම ඇතුළත් කරන්න',
-                  controller: _roadNameCtrl,
-                ),
-                const SizedBox(height: 20),
-                _buildDropdownField(
-                  label: 'මාර්ග වර්ගය:',
-                  hint: 'තෝරන්න',
-                  value: viewModel.selectedRoadType,
-                  items: viewModel.roadTypes,
-                  onChanged: (val) => viewModel.updateRoadType(val),
-                ),
-                const SizedBox(height: 20),
-                _buildInputField(
-                  label: 'සංවර්ධනය කළ යුතු දුර (km):',
-                  hint: '0.0',
-                  controller: _roadDistanceCtrl,
-                  isNumber: true,
-                ),
-                const SizedBox(height: 20),
-                _buildInputField(
-                  label: 'ප්‍රතිලාභීන් ගණන:',
-                  hint: '0000',
-                  controller: _roadBeneficiariesCtrl,
-                  isNumber: true,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Bridges Section
-          _buildCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  '02. පාලම් හා බෝක්කු',
-                  style: TextStyle(
-                    fontFamily: 'UNSamantha',
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                    color: Colors.black87,
+                  const SizedBox(height: 8),
+                  const Text(
+                    'පාලම් හා බෝක්කු සංවර්ධනය පිළිබඳ විස්තර මෙහි ඇතුළත් කරන්න.',
+                    style: TextStyle(fontSize: 13, color: Colors.black54),
                   ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'පාලම් හා බෝක්කු සංවර්ධනය පිළිබඳ විස්තර මෙහි ඇතුළත් කරන්න.',
-                  style: TextStyle(fontSize: 13, color: Colors.black54),
-                ),
-                const SizedBox(height: 24),
-                _buildInputField(
-                  label: 'පාලම/බෝක්කුවේ නම:',
-                  hint: 'නම ඇතුළත් කරන්න',
-                  controller: _bridgeNameCtrl,
-                ),
-                const SizedBox(height: 20),
-                _buildDropdownField(
-                  label: 'වර්ගය:',
-                  hint: 'තෝරන්න',
-                  value: viewModel.selectedBridgeType,
-                  items: viewModel.bridgeTypes,
-                  onChanged: (val) => viewModel.updateBridgeType(val),
-                ),
-                const SizedBox(height: 20),
-                _buildInputField(
-                  label: 'වර්තමාන තත්ත්වය:',
-                  hint: 'තත්ත්වය පිළිබඳ විස්තරයක්',
-                  controller: _bridgeConditionCtrl,
-                ),
-                const SizedBox(height: 20),
-                _buildInputField(
-                  label: 'ප්‍රතිලාභීන් ගණන:',
-                  hint: '0000',
-                  controller: _bridgeBeneficiariesCtrl,
-                  isNumber: true,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Save / Update Action Button
-          ElevatedButton(
-            onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
-                ? null
-                : () => _handleSave(context),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: viewModel.editingDocId != null
-                  ? const Color(0xFFD97706)
-                  : Colors.blue,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 24),
+                  _buildInputField(
+                    label: 'පාලම/බෝක්කුවේ නම:',
+                    hint: 'නම ඇතුළත් කරන්න',
+                    controller: _bridgeNameCtrl,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildDropdownField(
+                    label: 'වර්ගය:',
+                    hint: 'තෝරන්න',
+                    value: viewModel.selectedBridgeType,
+                    items: viewModel.bridgeTypes,
+                    onChanged: (val) => viewModel.updateBridgeType(val),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildInputField(
+                    label: 'වර්තමාන තත්ත්වය:',
+                    hint: 'තත්ත්වය පිළිබඳ විස්තරයක්',
+                    controller: _bridgeConditionCtrl,
+                  ),
+                  const SizedBox(height: 20),
+                  _buildInputField(
+                    label: 'ප්‍රතිලාභීන් ගණන:',
+                    hint: '0000',
+                    controller: _bridgeBeneficiariesCtrl,
+                    isNumber: true,
+                  ),
+                ],
               ),
             ),
-            child: viewModel.isSaving
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
+            const SizedBox(height: 24),
+
+            // Dynamic Action Button: Save (if filled) OR Next (if null/empty)
+            ElevatedButton.icon(
+              onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
+                  ? null
+                  : () => _handleButtonAction(context, viewModel),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isEmpty
+                    ? const Color(0xFF2563EB)
+                    : (viewModel.editingDocId != null
+                        ? const Color(0xFFD97706)
+                        : Colors.blue),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: viewModel.isSaving
+                  ? const SizedBox.shrink()
+                  : Icon(
+                      isEmpty
+                          ? Icons.arrow_forward_rounded
+                          : (viewModel.editingDocId != null
+                              ? Icons.sync_rounded
+                              : Icons.check_circle_outline_rounded),
                       color: Colors.white,
-                      strokeWidth: 2,
+                      size: 20,
                     ),
-                  )
-                : Text(
-                    viewModel.editingDocId != null
-                        ? 'යාවත්කාලීන කරන්න (Update)'
-                        : 'තොරතුරු සුරකින්න',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+              label: viewModel.isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      isEmpty
+                          ? 'ඊළඟට (Next)'
+                          : (viewModel.editingDocId != null
+                              ? 'යාවත්කාලීන කරන්න (Update)'
+                              : 'තොරතුරු සුරකින්න (Save)'),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-          ),
+            ),
 
-          const SizedBox(height: 32),
+            const SizedBox(height: 32),
 
-          // --- DISPLAY ENTERED DATA FIELDS LIST ---
-          _buildEnteredRecordsSection(viewModel),
+            // Entered Data Section
+            _buildEnteredRecordsSection(viewModel),
 
-          const SizedBox(height: 40),
-        ],
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
 
-  /// Displays all already entered data fields for this GN Division
   Widget _buildEnteredRecordsSection(InfrastructureViewModel viewModel) {
     if (viewModel.gnDivision == null || viewModel.gnDivision!.isEmpty) {
       return const SizedBox.shrink();
@@ -445,7 +507,6 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Road Info Tag
                         if (roadName.isNotEmpty) ...[
                           Row(
                             children: [
@@ -474,8 +535,6 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
                           ),
                           const SizedBox(height: 8),
                         ],
-
-                        // Bridge Info Tag
                         if (bridgeName.isNotEmpty) ...[
                           Row(
                             children: [
@@ -504,11 +563,8 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
                           ),
                           const SizedBox(height: 8),
                         ],
-
                         const Divider(height: 1),
                         const SizedBox(height: 8),
-
-                        // Action Buttons: Edit / Delete
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
