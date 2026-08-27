@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../data/auth_repository.dart';
 import 'admin_location_manager_screen.dart';
+import 'admin_survey_data_manager_screen.dart';
 
 /// Admin dashboard featuring analytics, member management,
 /// user activation/deactivation, dropdown field data feeder, and database explorer.
@@ -31,23 +32,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _membersActive = 0;
   int _membersDeactivated = 0;
   int _localAuthoritiesCount = 0;
+  int _fieldSurveysCount = 0;
 
   // ---------------------------------------------------------------------------
   // Database Explorer / Pagination State
   // ---------------------------------------------------------------------------
   static const _pageSize = 10;
   final Map<String, String> _collectionMap = {
-    'survey_responses': 'Collected Data',
     'users': 'Our Members (Users)',
+    'infrastructure_data': '🏗️ Infrastructure Surveys (Roads & Bridges)',
+    'agriculture_data': '🌾 Agriculture Surveys',
+    'daily_facilities_data': '🏢 Daily Facilities Surveys',
+    'drainage_data': '💧 Drainage Systems Surveys',
+    'tourist_attractions_data': '🏖️ Tourist Attractions Surveys',
+    'proposals_data': '💡 Development Proposals',
+    'disasters_data': '⚠️ Disaster & Risk Assessments',
+    'local_authorities': '📍 Administrative Locations (Dropdown Data)',
     'voters_2024': 'Members in Our System',
-    'local_authorities': 'Administrative Locations (Dropdown Data)',
+    'survey_responses': 'General Survey Responses',
   };
 
   String _currentCollectionId = 'users';
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _searchField = 'name';
-  String _userStatusFilter = 'all'; // 'all', 'active', 'deactivated'
+  String _userStatusFilter = 'all';
 
   List<QueryDocumentSnapshot<Map<String, dynamic>>> _documents = [];
   final List<QueryDocumentSnapshot<Map<String, dynamic>>> _pageStarts = [];
@@ -70,17 +79,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.dispose();
   }
 
-  // ---------------------------------------------------------------------------
-  // Data Loading & Status Toggle Methods
-  // ---------------------------------------------------------------------------
-
-  /// Aggregates counts and regional statistics from Firestore collections
   Future<void> _fetchDashboardStatistics() async {
     setState(() => _isLoadingStats = true);
     try {
       final firestore = FirebaseFirestore.instance;
 
-      // 1. Survey Responses stats
       final surveySnap = await firestore.collection('survey_responses').get();
       int sMatara = 0, sGalle = 0, sHambantota = 0;
       for (final doc in surveySnap.docs) {
@@ -95,7 +98,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       }
 
-      // 2. Voters 2024 stats
       final votersSnap = await firestore.collection('voters_2024').get();
       int vMatara = 0, vGalle = 0, vHambantota = 0;
       for (final doc in votersSnap.docs) {
@@ -104,13 +106,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         if (district.contains('matara')) {
           vMatara++;
         } else if (district.contains('galle')) {
-          sGalle++;
+          vGalle++;
         } else if (district.contains('hambantota')) {
           vHambantota++;
         }
       }
 
-      // 3. User Members stats
       final usersSnap = await firestore.collection('users').get();
       int active = 0, inactive = 0;
       for (final doc in usersSnap.docs) {
@@ -123,8 +124,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       }
 
-      // 4. Local Authorities stats
       final laSnap = await firestore.collection('local_authorities').get();
+
+      final infraSnap = await firestore.collection('infrastructure_data').get();
+      final agriSnap = await firestore.collection('agriculture_data').get();
+      final dailySnap = await firestore.collection('daily_facilities_data').get();
+      final drainSnap = await firestore.collection('drainage_data').get();
+      final touristSnap = await firestore.collection('tourist_attractions_data').get();
+      final propSnap = await firestore.collection('proposals_data').get();
+      final disSnap = await firestore.collection('disasters_data').get();
+
+      final totalSurveys = infraSnap.size +
+          agriSnap.size +
+          dailySnap.size +
+          drainSnap.size +
+          touristSnap.size +
+          propSnap.size +
+          disSnap.size;
 
       if (mounted) {
         setState(() {
@@ -135,16 +151,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _membersActive = active;
           _membersDeactivated = inactive;
           _localAuthoritiesCount = laSnap.size;
+          _fieldSurveysCount = totalSurveys;
         });
       }
     } catch (_) {
-      // Fallback/graceful defaults
     } finally {
       if (mounted) setState(() => _isLoadingStats = false);
     }
   }
 
-  /// Toggles isActive status for a user directly in Firestore
   Future<void> _toggleUserActiveStatus(String docId, bool currentStatus) async {
     final newStatus = !currentStatus;
     try {
@@ -179,7 +194,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
-  /// Fetches paginated records for the Explorer view
   Future<void> _loadExplorerPage({QueryDocumentSnapshot<Map<String, dynamic>>? startAfter}) async {
     setState(() {
       _isLoadingRecords = true;
@@ -189,13 +203,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       Query<Map<String, dynamic>> query = FirebaseFirestore.instance.collection(_currentCollectionId);
 
-      // Apply User Status filter if in users collection
       if (_currentCollectionId == 'users' && _userStatusFilter != 'all') {
         final bool requiredActive = _userStatusFilter == 'active';
         query = query.where('isActive', isEqualTo: requiredActive);
       }
 
-      // Apply Search Filter
       if (_searchQuery.isNotEmpty) {
         if (_searchField == 'documentId') {
           query = query
@@ -277,13 +289,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       case 'local_authorities':
         return ['documentId', 'name_en', 'name_si', 'district_en'];
       default:
-        return ['documentId'];
+        return ['documentId', 'collector_nic', 'collector_name', 'gn_division'];
     }
   }
-
-  // ---------------------------------------------------------------------------
-  // Build Methods
-  // ---------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -305,7 +313,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Modern header with greeting and sign-out
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.only(top: 54, left: 20, right: 20, bottom: 24),
@@ -385,10 +392,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  // ---------------------------------------------------------------------------
-  // Tab 1: Dashboard Overview
-  // ---------------------------------------------------------------------------
-
   Widget _buildDashboardOverview() {
     return RefreshIndicator(
       onRefresh: () async {
@@ -400,7 +403,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _buildSummaryCards(),
           const SizedBox(height: 16),
 
-          // Action Card: Feed / Manage Signup Dropdown Field Data
+          // Field Surveys Hub Card
+          _buildFieldDataManagementCard(),
+
+          const SizedBox(height: 12),
+
+          // Location Manager Card
           _buildDropdownDataManagementCard(),
 
           const SizedBox(height: 24),
@@ -442,13 +450,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Banner Card to navigate to Location Manager & DB Feeder
-  Widget _buildDropdownDataManagementCard() {
+  Widget _buildFieldDataManagementCard() {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+          colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -466,13 +473,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFF1E88E5).withOpacity(0.2),
+              color: const Color(0xFF10B981).withOpacity(0.2),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFF1E88E5).withOpacity(0.4)),
+              border: Border.all(color: const Color(0xFF10B981).withOpacity(0.4)),
             ),
             child: const Icon(
-              Icons.add_location_alt_rounded,
-              color: Color(0xFF60A5FA),
+              Icons.analytics_rounded,
+              color: Color(0xFF34D399),
               size: 28,
             ),
           ),
@@ -482,7 +489,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Signup Dropdown Data',
+                  'Survey Review & Analytics',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -491,7 +498,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Feed and manage Local Authorities & GN Divisions in Firestore (${_localAuthoritiesCount} loaded)',
+                  'Review records from District > GN with analytics ($_fieldSurveysCount records)',
                   style: const TextStyle(
                     color: Colors.white70,
                     fontSize: 11.5,
@@ -503,7 +510,87 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const SizedBox(width: 8),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF1E88E5),
+              backgroundColor: const Color(0xFF10B981),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const AdminSurveyDataManagerScreen(),
+                ),
+              );
+              _fetchDashboardStatistics();
+            },
+            child: const Text(
+              'View Hub',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdownDataManagementCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E88E5).withOpacity(0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.add_location_alt_rounded,
+              color: Color(0xFF1E88E5),
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Signup Dropdown Data',
+                  style: TextStyle(
+                    color: Color(0xFF1E293B),
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Feed and configure Local Authorities & GN Divisions ($_localAuthoritiesCount loaded)',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Color(0xFF1E88E5)),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -519,7 +606,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
             child: const Text(
               'Feed / Manage',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1E88E5),
+              ),
             ),
           ),
         ],
@@ -535,7 +626,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Expanded(
               child: _buildDistrictStatCard(
-                title: 'Collected Data',
+                title: 'General Surveys',
                 totalCount: _surveyCount,
                 districts: _surveyDistricts,
                 cardColor: Colors.white,
@@ -844,7 +935,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildDatabaseExplorer() {
     return Column(
       children: [
-        // Dropdown Selector for Collections
         Padding(
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
           child: Container(
@@ -873,7 +963,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
 
-        // Status Filter Chips (For Users Collection)
         if (_currentCollectionId == 'users')
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 4.0),
@@ -888,7 +977,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
 
-        // Search Bar
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18.0, vertical: 6.0),
           child: Container(
@@ -952,10 +1040,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
         ),
 
-        // Records List
         Expanded(child: _buildExplorerRecordsList()),
-
-        // Pagination Bar
         _buildPagination(),
       ],
     );
@@ -1357,6 +1442,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
               const SizedBox(height: 12),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDCFCE7),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.analytics_rounded, color: Color(0xFF16A34A)),
+                ),
+                title: const Text(
+                  'Survey Review & Analytics Hub',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                subtitle: const Text(
+                  'Hierarchical review (District > GN) with full data analytics',
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                onTap: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AdminSurveyDataManagerScreen(),
+                    ),
+                  );
+                  _fetchDashboardStatistics();
+                },
+              ),
+              const Divider(),
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
@@ -1994,11 +2108,11 @@ class _ValueEditor extends StatelessWidget {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
               borderSide: const BorderSide(color: Color(0xFF1E88E5)),
             ),
           ),
