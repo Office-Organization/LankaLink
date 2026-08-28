@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/app_screen.dart';
-import 'infrastructure_form_screen.dart';
+import 'infrastructure_form_screen.dart'; 
+import 'agriculture_form_screen.dart';
+import 'daily_facilities_form_screen.dart';
+import 'drainage_form_screen.dart';
+import 'disasters_form_screen.dart';
 import 'gn_details_view_model.dart';
 
 class GnDetailsScreen extends StatelessWidget {
@@ -20,7 +24,6 @@ class _GnDetailsView extends StatelessWidget {
   const _GnDetailsView();
 
   void _showChangeLocationDialog(BuildContext context, GnDetailsViewModel viewModel) async {
-    // Fetch available local authorities from the view model
     final authorities = await viewModel.fetchAvailableLocalAuthorities();
     
     if (!context.mounted) return;
@@ -35,12 +38,11 @@ class _GnDetailsView extends StatelessWidget {
     String? selectedAuthorityName = authorities.first['name_en'];
     String? selectedDistrict = authorities.first['district_en'];
     
-    // Extract GN divisions for the default selected authority
     List<dynamic> currentGNDivisionsList = authorities.first['gn_divisions'];
     String? selectedGN;
 
     if (currentGNDivisionsList.isNotEmpty) {
-      selectedGN = currentGNDivisionsList.first['en']; // Using English name from database map
+      selectedGN = currentGNDivisionsList.first['en']; 
     }
 
     showModalBottomSheet(
@@ -64,7 +66,7 @@ class _GnDetailsView extends StatelessWidget {
                     Icon(Icons.edit_location_alt, color: Colors.blue),
                     SizedBox(width: 8),
                     Text(
-                      'Change Location',
+                      'ස්ථානය වෙනස් කරන්න (Change Location)',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
                     ),
                   ],
@@ -72,7 +74,7 @@ class _GnDetailsView extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 // Local Authority Dropdown
-                const Text('Local Authority', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const Text('පළාත් පාලන ආයතනය (Local Authority)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: selectedAuthorityId,
@@ -82,9 +84,14 @@ class _GnDetailsView extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   items: authorities.map((auth) {
+                    final nameEn = auth['name_en'] ?? 'Unknown';
+                    final nameSi = auth['name_si']?.toString() ?? '';
+                    
+                    final displayName = nameSi.isNotEmpty ? '$nameSi ($nameEn)' : nameEn;
+
                     return DropdownMenuItem<String>(
                       value: auth['id'],
-                      child: Text(auth['name_en'] ?? 'Unknown'),
+                      child: Text(displayName, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -92,7 +99,7 @@ class _GnDetailsView extends StatelessWidget {
                       setModalState(() {
                         selectedAuthorityId = val;
                         final auth = authorities.firstWhere((element) => element['id'] == val);
-                        selectedAuthorityName = auth['name_en'];
+                        selectedAuthorityName = auth['name_en']; 
                         selectedDistrict = auth['district_en'];
                         currentGNDivisionsList = auth['gn_divisions'] ?? [];
                         selectedGN = currentGNDivisionsList.isNotEmpty ? currentGNDivisionsList.first['en'] : null;
@@ -103,7 +110,7 @@ class _GnDetailsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 // GN Division Dropdown
-                const Text('Grama Niladhari (GN) Division', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                const Text('ග්‍රාම නිලධාරී වසම (GN Division)', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: selectedGN,
@@ -113,10 +120,14 @@ class _GnDetailsView extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   items: currentGNDivisionsList.map((gn) {
-                    final gnName = gn['en'].toString(); // Extracted from map structure {en: ..., si: ...}
+                    final gnNameEn = gn['en']?.toString() ?? 'Unknown'; 
+                    final gnNameSi = gn['si']?.toString() ?? '';
+                    
+                    final displayGnName = gnNameSi.isNotEmpty ? '$gnNameSi ($gnNameEn)' : gnNameEn;
+
                     return DropdownMenuItem<String>(
-                      value: gnName,
-                      child: Text(gnName),
+                      value: gnNameEn, 
+                      child: Text(displayGnName, overflow: TextOverflow.ellipsis),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -139,7 +150,7 @@ class _GnDetailsView extends StatelessWidget {
                     onPressed: () async {
                       if (selectedGN == null || selectedAuthorityName == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please select a valid GN division.')),
+                          const SnackBar(content: Text('කරුණාකර වලංගු ග්‍රාම නිලධාරී වසමක් තෝරන්න (Select valid GN division).')),
                         );
                         return;
                       }
@@ -156,14 +167,14 @@ class _GnDetailsView extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             backgroundColor: Colors.green,
-                            content: Text('Location updated successfully in database!'),
+                            content: Text('ස්ථානය සාර්ථකව යාවත්කාලීන කරන ලදී (Location updated successfully)!'),
                           ),
                         );
                       }
                     },
                     child: viewModel.isSaving 
                         ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        : const Text('වෙනස්කම් සුරකින්න (Save Changes)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   ),
                 ),
               ],
@@ -174,12 +185,28 @@ class _GnDetailsView extends StatelessWidget {
     );
   }
 
+  // Parses ISO string into "YYYY MM DD HH:mm" format safely
+  String _formatDateTime(String isoString) {
+    if (isoString.isEmpty) return 'Unknown Date';
+    try {
+      final dt = DateTime.parse(isoString).toLocal();
+      final year = dt.year.toString();
+      final month = dt.month.toString().padLeft(2, '0');
+      final day = dt.day.toString().padLeft(2, '0');
+      final hour = dt.hour.toString().padLeft(2, '0');
+      final minute = dt.minute.toString().padLeft(2, '0');
+      return '$year-$month-$day $hour:$minute';
+    } catch (e) {
+      return isoString; // fallback to raw string if parsing fails
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = context.watch<GnDetailsViewModel>();
 
     return AppScreen(
-      title: 'ග්‍රාම නිලධාරී තොරතුරු', // GN Dashboard
+      title: 'ග්‍රාම නිලධාරී තොරතුරු',
       child: viewModel.isLoading
           ? const Center(child: CircularProgressIndicator(color: Colors.blue))
           : ListView(
@@ -285,21 +312,28 @@ class _GnDetailsView extends StatelessWidget {
                       title: 'යටිතල පහසුකම්\n(Infrastructure)',
                       icon: Icons.apartment,
                       color: Colors.orange,
-                      onTap: () => _navigateTo(context, const InfrastructureFormScreen()), // Navigates to Screen 01
+                      onTap: () => _navigateTo(context, const InfrastructureFormScreen()), 
+                    ),
+                    _buildGridMenuBtn(
+                      context: context,
+                      title: 'කෘෂිකර්මාන්තය\n(Agriculture)',
+                      icon: Icons.eco_rounded,
+                      color: Colors.green,
+                      onTap: () => _navigateTo(context, const AgricultureFormScreen()),
                     ),
                     _buildGridMenuBtn(
                       context: context,
                       title: 'එදිනෙදා පහසුකම්\n(Daily Facilities)',
                       icon: Icons.local_convenience_store_rounded,
                       color: Colors.teal,
-                      onTap: () {},
+                      onTap: () => _navigateTo(context, const DailyFacilitiesFormScreen()),
                     ),
                     _buildGridMenuBtn(
                       context: context,
                       title: 'ජලාපවහන\n(Drainage)',
                       icon: Icons.water_drop_outlined,
                       color: Colors.blueAccent,
-                      onTap: () {},
+                      onTap: () => _navigateTo(context, const DrainageFormScreen()),
                     ),
                     _buildGridMenuBtn(
                       context: context,
@@ -310,23 +344,26 @@ class _GnDetailsView extends StatelessWidget {
                     ),
                     _buildGridMenuBtn(
                       context: context,
-                      title: 'නව යෝජනා\n(Proposals)',
-                      icon: Icons.lightbulb_outline,
-                      color: Colors.amber.shade700,
-                      onTap: () {}, 
-                    ),
-                    _buildGridMenuBtn(
-                      context: context,
                       title: 'ආපදා තොරතුරු\n(Disasters)',
                       icon: Icons.flood_outlined,
                       color: Colors.redAccent,
-                      onTap: () {}, 
+                      onTap: () => _navigateTo(context, const DisastersFormScreen()), 
                     ),
                   ],
                 ),
                 const SizedBox(height: 32),
 
-                // --- 4. START WIZARD BUTTON ---
+                // --- 4. RECENT SUBMISSIONS FEED (FORMATTED) ---
+                const Text(
+                  'ඔබගේ වාර්තා කිරීම් (Your Submissions)',
+                  style: TextStyle(fontFamily: 'UNSamantha', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+                const SizedBox(height: 16),
+                _buildRecentSubmissionsFeed(context, viewModel),
+                
+                const SizedBox(height: 32),
+
+                // --- 5. START WIZARD BUTTON ---
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.push(
@@ -351,7 +388,74 @@ class _GnDetailsView extends StatelessWidget {
     );
   }
 
-  // Helper Widget for Top Summary Cards
+  // Updated submissions feed to strictly redirect to the 1st form
+  Widget _buildRecentSubmissionsFeed(BuildContext context, GnDetailsViewModel viewModel) {
+    if (viewModel.recentSubmissions.isEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Center(
+          child: Text(
+            'මෙම වසම සඳහා තවමත් කිසිදු දත්තයක් ඇතුළත් කර නොමැත.',
+            style: TextStyle(color: Colors.grey, fontSize: 14),
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: viewModel.recentSubmissions.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final item = viewModel.recentSubmissions[index];
+        final formattedDate = _formatDateTime(item['timestamp']);
+        final reportType = item['typeLabel']; // e.g. "Agriculture (කෘෂිකර්මාන්තය)"
+
+        return InkWell(
+          onTap: () {
+            // ALWAYS redirect to the first form so the user can flow through one by one
+            Navigator.push(
+              context, 
+              MaterialPageRoute(builder: (context) => const InfrastructureFormScreen())
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.history_edu, color: Colors.blue.shade700, size: 20),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '$formattedDate : Reported $reportType Report',
+                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87),
+                  ),
+                ),
+                const Icon(Icons.edit_document, color: Colors.grey, size: 18),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildStatCard({required String title, required String value, required IconData icon, required Color color}) {
     return Expanded(
       child: Container(
@@ -381,7 +485,6 @@ class _GnDetailsView extends StatelessWidget {
     );
   }
 
-  // Helper Widget for the Grid Menu Buttons
   Widget _buildGridMenuBtn({
     required BuildContext context,
     required String title,
