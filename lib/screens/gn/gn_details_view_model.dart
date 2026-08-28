@@ -128,6 +128,37 @@ class GnDetailsViewModel extends ChangeNotifier {
     List<Map<String, dynamic>> tempSubmissions = [];
 
     try {
+      // 0. Fetch Infrastructure Data (Added this for you)
+      final infraSnap = await _firestore.collection('infrastructure_data')
+          .where('gn_division', isEqualTo: currentGnDivision)
+          .get();
+      tempProjects += infraSnap.docs.length;
+      
+      for (var doc in infraSnap.docs) {
+        final data = doc.data();
+        final road = data['roads_infrastructure'] as Map? ?? {};
+        final bridge = data['bridges_infrastructure'] as Map? ?? {};
+        
+        final rBen = int.tryParse(road['beneficiaries_count']?.toString() ?? '0') ?? 0;
+        final bBen = int.tryParse(bridge['beneficiaries_count']?.toString() ?? '0') ?? 0;
+        tempBeneficiaries += (rBen + bBen);
+
+        String displayTitle = road['road_name']?.toString() ?? '';
+        if (displayTitle.isEmpty) displayTitle = bridge['bridge_name']?.toString() ?? 'ස්ථානයක් නැත';
+        
+        tempSubmissions.add({
+          'docId': doc.id,
+          'title': displayTitle,
+          'subtitle': 'යටිතල පහසුකම්',
+          'type': 'infrastructure',
+          'typeLabel': 'Infrastructure',
+          'icon': Icons.apartment,
+          'color': Colors.orange,
+          'timestamp': data['created_at_timestamp']?.toString() ?? '',
+          'rawData': data,
+        });
+      }
+
       // 1. Fetch Agriculture Data
       final agriSnap = await _firestore.collection('agriculture_data')
           .where('gn_division', isEqualTo: currentGnDivision)
@@ -145,7 +176,7 @@ class GnDetailsViewModel extends ChangeNotifier {
           'title': agri['location_name']?.toString() ?? 'ස්ථානයක් නැත',
           'subtitle': agri['development_category']?.toString() ?? 'කෘෂිකර්මාන්තය',
           'type': 'agriculture',
-          'typeLabel': 'Agriculture (කෘෂිකර්මාන්තය)',
+          'typeLabel': 'Agriculture',
           'icon': Icons.eco_rounded,
           'color': Colors.green,
           'timestamp': data['created_at_timestamp']?.toString() ?? '',
@@ -170,7 +201,7 @@ class GnDetailsViewModel extends ChangeNotifier {
           'title': fac['facility_type']?.toString() ?? 'පහසුකමක් නැත',
           'subtitle': 'රජයේ ඉඩමක්: ${fac['has_government_land']?.toString() ?? "-"}',
           'type': 'daily_facilities',
-          'typeLabel': 'Daily Facilities (එදිනෙදා පහසුකම්)',
+          'typeLabel': 'Daily Facilities',
           'icon': Icons.local_convenience_store_rounded,
           'color': Colors.teal,
           'timestamp': data['created_at_timestamp']?.toString() ?? '',
@@ -195,7 +226,7 @@ class GnDetailsViewModel extends ChangeNotifier {
           'title': drain['location_name']?.toString() ?? 'ස්ථානයක් නැත',
           'subtitle': 'තත්ත්වය: ${drain['current_condition']?.toString() ?? "-"}',
           'type': 'drainage',
-          'typeLabel': 'Drainage System (ජලාපවහන)',
+          'typeLabel': 'Drainage',
           'icon': Icons.water_drop_outlined,
           'color': Colors.blueAccent,
           'timestamp': data['created_at_timestamp']?.toString() ?? '',
@@ -218,7 +249,7 @@ class GnDetailsViewModel extends ChangeNotifier {
           'title': dis['affected_area_name']?.toString() ?? 'ප්‍රදේශයක් නැත',
           'subtitle': dis['disaster_type']?.toString() ?? 'ආපදාවකි',
           'type': 'disasters',
-          'typeLabel': 'Disasters (ආපදා)',
+          'typeLabel': 'Disasters',
           'icon': Icons.flood_outlined,
           'color': Colors.redAccent,
           'timestamp': data['created_at_timestamp']?.toString() ?? '',

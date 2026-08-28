@@ -7,19 +7,25 @@ import 'map_selection_screen.dart';
 import 'drainage_form_screen.dart';
 
 class DailyFacilitiesFormScreen extends StatelessWidget {
-  const DailyFacilitiesFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const DailyFacilitiesFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => DailyFacilitiesViewModel(),
-      child: const _DailyFacilitiesFormView(),
+      child: _DailyFacilitiesFormView(editDocId: editDocId, editData: editData),
     );
   }
 }
 
 class _DailyFacilitiesFormView extends StatefulWidget {
-  const _DailyFacilitiesFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _DailyFacilitiesFormView({this.editDocId, this.editData});
 
   @override
   State<_DailyFacilitiesFormView> createState() =>
@@ -33,6 +39,14 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
   void initState() {
     super.initState();
     _beneficiariesCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<DailyFacilitiesViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {
@@ -46,7 +60,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
     super.dispose();
   }
 
-  /// Checks if all form fields and dropdowns are empty / null
   bool _isFormEmpty(DailyFacilitiesViewModel vm) {
     return _beneficiariesCtrl.text.trim().isEmpty &&
         vm.selectedFacilityType == null &&
@@ -76,13 +89,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
         (facilityData['map_coordinates'] ?? '').toString().isNotEmpty
             ? facilityData['map_coordinates']
             : null);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('තෝරාගත් දත්ත පෝරමයට ඇතුළත් කරන ලදී.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _clearForm(DailyFacilitiesViewModel vm) {
@@ -94,7 +100,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
 
   void _handleButtonAction(
       BuildContext context, DailyFacilitiesViewModel viewModel) async {
-    // 1. IF FORM IS EMPTY / NULL: Directly proceed to next form
     if (_isFormEmpty(viewModel)) {
       Navigator.push(
         context,
@@ -105,7 +110,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
       return;
     }
 
-    // 2. IF FILLED: Save / Update in Firestore and proceed
     final bool success = await viewModel.saveDataAndProceed(
       beneficiariesCount: _beneficiariesCtrl.text.trim(),
     );
@@ -207,11 +211,9 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Collector Location Card
             _buildCollectorLocationCard(viewModel),
             const SizedBox(height: 16),
 
-            // Active Edit Mode Banner
             if (viewModel.editingDocId != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -246,7 +248,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
               const SizedBox(height: 16),
             ],
 
-            // Daily Facilities Card
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +268,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 1. Facility Type Dropdown
                   _buildDropdownField(
                     label: 'පහසුකම් වර්ගය තෝරන්න:',
                     hint: 'තෝරන්න',
@@ -277,7 +277,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 2. Map Point Button
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -341,7 +340,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 3. Government Land Dropdown
                   _buildDropdownField(
                     label: 'මේ ඉදිකිරීමට රජයේ ඉඩමක් පවතීද?',
                     hint: 'ඔව් / නැත',
@@ -351,7 +349,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 4. Beneficiaries Count Input
                   _buildInputField(
                     label: 'ප්‍රතිලාභීන් ගණන:',
                     hint: '0000',
@@ -363,7 +360,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
             ),
             const SizedBox(height: 24),
 
-            // Dynamic Action Button: Save (if filled) OR Next (if empty)
             ElevatedButton.icon(
               onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
                   ? null
@@ -415,7 +411,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
 
             const SizedBox(height: 32),
 
-            // Entered Data Records Section
             _buildEnteredRecordsSection(viewModel),
 
             const SizedBox(height: 40),
@@ -425,7 +420,6 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
     );
   }
 
-  /// Displays all already entered data fields for this GN Division
   Widget _buildEnteredRecordsSection(DailyFacilitiesViewModel viewModel) {
     if (viewModel.gnDivision == null || viewModel.gnDivision!.isEmpty) {
       return const SizedBox.shrink();

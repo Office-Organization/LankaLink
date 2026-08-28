@@ -185,7 +185,7 @@ class _GnDetailsView extends StatelessWidget {
     );
   }
 
-  // Parses ISO string into "YYYY MM DD HH:mm" format safely
+  // Parses ISO string into "YYYY-MM-DD HH:mm"
   String _formatDateTime(String isoString) {
     if (isoString.isEmpty) return 'Unknown Date';
     try {
@@ -197,7 +197,7 @@ class _GnDetailsView extends StatelessWidget {
       final minute = dt.minute.toString().padLeft(2, '0');
       return '$year-$month-$day $hour:$minute';
     } catch (e) {
-      return isoString; // fallback to raw string if parsing fails
+      return isoString; 
     }
   }
 
@@ -353,7 +353,7 @@ class _GnDetailsView extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
 
-                // --- 4. RECENT SUBMISSIONS FEED (FORMATTED) ---
+                // --- 4. RECENT SUBMISSIONS FEED ---
                 const Text(
                   'ඔබගේ වාර්තා කිරීම් (Your Submissions)',
                   style: TextStyle(fontFamily: 'UNSamantha', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
@@ -388,7 +388,7 @@ class _GnDetailsView extends StatelessWidget {
     );
   }
 
-  // Updated submissions feed to strictly redirect to the 1st form
+  // Updated Feed: Routes directly to the proper forms AND passes the correct data.
   Widget _buildRecentSubmissionsFeed(BuildContext context, GnDetailsViewModel viewModel) {
     if (viewModel.recentSubmissions.isEmpty) {
       return Container(
@@ -416,15 +416,41 @@ class _GnDetailsView extends StatelessWidget {
       itemBuilder: (context, index) {
         final item = viewModel.recentSubmissions[index];
         final formattedDate = _formatDateTime(item['timestamp']);
-        final reportType = item['typeLabel']; // e.g. "Agriculture (කෘෂිකර්මාන්තය)"
+        final reportType = item['typeLabel']; 
 
         return InkWell(
           onTap: () {
-            // ALWAYS redirect to the first form so the user can flow through one by one
-            Navigator.push(
-              context, 
-              MaterialPageRoute(builder: (context) => const InfrastructureFormScreen())
-            );
+            Widget screen;
+            
+            // This safely passes editDocId and editData to ALL forms now
+            if (item['type'] == 'infrastructure') {
+              screen = InfrastructureFormScreen(
+                editDocId: item['docId'], 
+                editData: item['rawData']
+              );
+            } else if (item['type'] == 'agriculture') {
+              screen = AgricultureFormScreen(
+                editDocId: item['docId'], 
+                editData: item['rawData']
+              );
+            } else if (item['type'] == 'daily_facilities') {
+              screen = DailyFacilitiesFormScreen(
+                editDocId: item['docId'], 
+                editData: item['rawData']
+              );
+            } else if (item['type'] == 'drainage') {
+              screen = DrainageFormScreen(
+                editDocId: item['docId'], 
+                editData: item['rawData']
+              );
+            } else {
+              screen = DisastersFormScreen(
+                editDocId: item['docId'], 
+                editData: item['rawData']
+              );
+            }
+
+            Navigator.push(context, MaterialPageRoute(builder: (context) => screen));
           },
           borderRadius: BorderRadius.circular(12),
           child: Container(

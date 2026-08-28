@@ -7,19 +7,25 @@ import 'map_selection_screen.dart';
 import 'proposals_form_screen.dart';
 
 class TouristAttractionsFormScreen extends StatelessWidget {
-  const TouristAttractionsFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const TouristAttractionsFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => TouristAttractionsViewModel(),
-      child: const _TouristAttractionsFormView(),
+      child: _TouristAttractionsFormView(editDocId: editDocId, editData: editData),
     );
   }
 }
 
 class _TouristAttractionsFormView extends StatefulWidget {
-  const _TouristAttractionsFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _TouristAttractionsFormView({this.editDocId, this.editData});
 
   @override
   State<_TouristAttractionsFormView> createState() =>
@@ -36,6 +42,14 @@ class _TouristAttractionsFormViewState
     super.initState();
     _locationNameCtrl.addListener(_onFormFieldChanged);
     _developmentNeedsCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<TouristAttractionsViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {

@@ -6,19 +6,25 @@ import 'drainage_view_model.dart';
 import 'tourist_attractions_form_screen.dart';
 
 class DrainageFormScreen extends StatelessWidget {
-  const DrainageFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const DrainageFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => DrainageViewModel(),
-      child: const _DrainageFormView(),
+      child: _DrainageFormView(editDocId: editDocId, editData: editData),
     );
   }
 }
 
 class _DrainageFormView extends StatefulWidget {
-  const _DrainageFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _DrainageFormView({this.editDocId, this.editData});
 
   @override
   State<_DrainageFormView> createState() => _DrainageFormViewState();
@@ -37,6 +43,14 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
     _developmentAmountCtrl.addListener(_onFormFieldChanged);
     _currentConditionCtrl.addListener(_onFormFieldChanged);
     _beneficiariesCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<DrainageViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {
@@ -57,7 +71,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
     super.dispose();
   }
 
-  /// Checks if all form input fields are empty / null
   bool _isFormEmpty() {
     return _locationNameCtrl.text.trim().isEmpty &&
         _developmentAmountCtrl.text.trim().isEmpty &&
@@ -80,13 +93,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
     });
 
     vm.setEditingDocId(docId);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('තෝරාගත් දත්ත පෝරමයට ඇතුළත් කරන ලදී.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _clearForm(DrainageViewModel vm) {
@@ -101,7 +107,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
 
   void _handleButtonAction(
       BuildContext context, DrainageViewModel viewModel) async {
-    // 1. IF FORM IS EMPTY / NULL: Directly proceed to next form
     if (_isFormEmpty()) {
       Navigator.push(
         context,
@@ -112,7 +117,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
       return;
     }
 
-    // 2. IF FILLED: Save / Update in Firestore and proceed
     final bool success = await viewModel.saveDataAndProceed(
       locationName: _locationNameCtrl.text.trim(),
       developmentAmount: _developmentAmountCtrl.text.trim(),
@@ -162,11 +166,9 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Collector Location Card
             _buildCollectorLocationCard(viewModel),
             const SizedBox(height: 16),
 
-            // Active Edit Mode Banner
             if (viewModel.editingDocId != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -201,7 +203,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
               const SizedBox(height: 16),
             ],
 
-            // Drainage Form Card
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +223,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 1. Location Name Input
                   _buildInputField(
                     label: 'ස්ථානයෙහි නම:',
                     hint: 'ස්ථානයේ නම',
@@ -230,7 +230,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 2. Approximate Development Amount Input
                   _buildInputField(
                     label: 'සංවර්ධනය කළයුතු ප්‍රමාණය ආසන්න වශයෙන්:',
                     hint: '00000 000',
@@ -239,7 +238,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 3. Current Condition Input
                   _buildInputField(
                     label: 'දැනට පවතින තත්වය:',
                     hint: 'දැනට පවතින තත්වය',
@@ -247,7 +245,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 4. Approximate Beneficiaries Input
                   _buildInputField(
                     label: 'ප්‍රතිලාභීන් ගණන ආසන්නව:',
                     hint: '0000 0000',
@@ -259,7 +256,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
             ),
             const SizedBox(height: 24),
 
-            // Dynamic Action Button: Save (if filled) OR Next (if empty)
             ElevatedButton.icon(
               onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
                   ? null
@@ -311,7 +307,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
 
             const SizedBox(height: 32),
 
-            // Entered Data Records Section
             _buildEnteredRecordsSection(viewModel),
 
             const SizedBox(height: 40),
@@ -321,7 +316,6 @@ class _DrainageFormViewState extends State<_DrainageFormView> {
     );
   }
 
-  /// Displays all already entered data fields for this GN Division
   Widget _buildEnteredRecordsSection(DrainageViewModel viewModel) {
     if (viewModel.gnDivision == null || viewModel.gnDivision!.isEmpty) {
       return const SizedBox.shrink();

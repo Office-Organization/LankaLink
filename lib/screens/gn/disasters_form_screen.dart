@@ -6,19 +6,25 @@ import 'disasters_view_model.dart';
 import 'map_selection_screen.dart';
 
 class DisastersFormScreen extends StatelessWidget {
-  const DisastersFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const DisastersFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => DisastersViewModel(),
-      child: const _DisastersFormView(),
+      child: _DisastersFormView(editDocId: editDocId, editData: editData),
     );
   }
 }
 
 class _DisastersFormView extends StatefulWidget {
-  const _DisastersFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _DisastersFormView({this.editDocId, this.editData});
 
   @override
   State<_DisastersFormView> createState() => _DisastersFormViewState();
@@ -39,6 +45,14 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
     _affectedHousesCtrl.addListener(_onFormFieldChanged);
     _mitigationNeedsCtrl.addListener(_onFormFieldChanged);
     _safeLocationCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<DisastersViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {
@@ -61,7 +75,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
     super.dispose();
   }
 
-  /// Checks if all form fields and dropdowns are empty / null
   bool _isFormEmpty(DisastersViewModel vm) {
     return _affectedAreaCtrl.text.trim().isEmpty &&
         _affectedFamiliesCtrl.text.trim().isEmpty &&
@@ -108,13 +121,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
         (disasterData['map_coordinates'] ?? '').toString().isNotEmpty
             ? disasterData['map_coordinates']
             : null);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('තෝරාගත් දත්ත පෝරමයට ඇතුළත් කරන ලදී.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _clearForm(DisastersViewModel vm) {
@@ -130,7 +136,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
 
   void _handleFinish(
       BuildContext context, DisastersViewModel viewModel) async {
-    // 1. IF FORM IS EMPTY / NULL: Directly exit / finish survey workflow
     if (_isFormEmpty(viewModel)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -143,7 +148,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
       return;
     }
 
-    // 2. IF FILLED: Save / Update in Firestore and finish
     final bool success = await viewModel.finishAndSave(
       affectedAreaName: _affectedAreaCtrl.text.trim(),
       affectedFamiliesCount: _affectedFamiliesCtrl.text.trim(),
@@ -244,11 +248,9 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Collector Location Card
             _buildCollectorLocationCard(viewModel),
             const SizedBox(height: 16),
 
-            // Active Edit Mode Banner
             if (viewModel.editingDocId != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -283,7 +285,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
               const SizedBox(height: 16),
             ],
 
-            // SECTION 1: Disaster Identification & Location
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -304,7 +305,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 24),
 
-                  // 1. Disaster Type Dropdown
                   _buildDropdownField(
                     label: 'ආපදා වර්ගය තෝරන්න:',
                     hint: 'තෝරන්න',
@@ -314,7 +314,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 2. Affected Area / Village Name
                   _buildInputField(
                     label: 'පීඩාවට පත්වන ප්‍රදේශය / ස්ථානය / ග්‍රාමය:',
                     hint: 'ප්‍රදේශයේ නම ඇතුළත් කරන්න',
@@ -322,7 +321,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // 3. Map Point Button
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -391,7 +389,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
 
             const SizedBox(height: 20),
 
-            // SECTION 2: Impact & Severity Level
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -407,7 +404,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Risk Level Dropdown
                   _buildDropdownField(
                     label: 'අවදානම් මට්ටම (Risk Level):',
                     hint: 'අවදානම් මට්ටම තෝරන්න',
@@ -417,7 +413,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Frequency Dropdown
                   _buildDropdownField(
                     label: 'සිදුවීමේ වාර ගණන (Frequency):',
                     hint: 'වාර ගණන තෝරන්න',
@@ -427,7 +422,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Number of Families Affected
                   _buildInputField(
                     label: 'පීඩාවට පත්වන පවුල් ගණන (ආසන්නව):',
                     hint: '000',
@@ -436,7 +430,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Number of Houses at Risk
                   _buildInputField(
                     label: 'හානි විය හැකි නිවාස/ගොඩනැගිලි ගණන:',
                     hint: '000',
@@ -449,7 +442,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
 
             const SizedBox(height: 20),
 
-            // SECTION 3: Mitigation Needs & Relief Planning
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -465,7 +457,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Mitigation Proposals / Action Needs
                   _buildInputField(
                     label: 'ආපදා අවම කිරීමට අවශ්‍ය යෝජනා / පියවර:',
                     hint:
@@ -475,7 +466,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Safe Evacuation Center
                   _buildInputField(
                     label: 'ආසන්නතම ආරක්‍ෂිත ස්ථානය / සහන කඳවුර:',
                     hint: 'උදා: ප්‍රදේශයේ පාසල / පන්සල / ප්‍රජා ශාලාව',
@@ -487,7 +477,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
 
             const SizedBox(height: 24),
 
-            // Dynamic Action Button: Save & Finish vs. Finish
             ElevatedButton.icon(
               onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
                   ? null
@@ -539,7 +528,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
 
             const SizedBox(height: 32),
 
-            // Entered Data Records Section
             _buildEnteredRecordsSection(viewModel),
 
             const SizedBox(height: 40),
@@ -549,7 +537,6 @@ class _DisastersFormViewState extends State<_DisastersFormView> {
     );
   }
 
-  /// Displays all already entered data fields for this GN Division
   Widget _buildEnteredRecordsSection(DisastersViewModel viewModel) {
     if (viewModel.gnDivision == null || viewModel.gnDivision!.isEmpty) {
       return const SizedBox.shrink();

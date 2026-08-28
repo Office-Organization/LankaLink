@@ -7,19 +7,25 @@ import 'map_selection_screen.dart';
 import 'daily_facilities_form_screen.dart';
 
 class AgricultureFormScreen extends StatelessWidget {
-  const AgricultureFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const AgricultureFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => AgricultureViewModel(),
-      child: const _AgricultureFormView(),
+      child: _AgricultureFormView(editDocId: editDocId, editData: editData),
     );
   }
 }
 
 class _AgricultureFormView extends StatefulWidget {
-  const _AgricultureFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _AgricultureFormView({this.editDocId, this.editData});
 
   @override
   State<_AgricultureFormView> createState() => _AgricultureFormViewState();
@@ -34,6 +40,14 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
     super.initState();
     _locationNameCtrl.addListener(_onFormFieldChanged);
     _beneficiariesCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<AgricultureViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {
@@ -49,7 +63,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
     super.dispose();
   }
 
-  /// Checks if all form fields and dropdowns are empty / null
   bool _isFormEmpty(AgricultureViewModel vm) {
     return _locationNameCtrl.text.trim().isEmpty &&
         _beneficiariesCtrl.text.trim().isEmpty &&
@@ -81,13 +94,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
         (agriData['map_coordinates'] ?? '').toString().isNotEmpty
             ? agriData['map_coordinates']
             : null);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('තෝරාගත් දත්ත පෝරමයට ඇතුළත් කරන ලදී.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _clearForm(AgricultureViewModel vm) {
@@ -100,7 +106,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
 
   void _handleButtonAction(
       BuildContext context, AgricultureViewModel viewModel) async {
-    // 1. IF FORM IS EMPTY / NULL: Directly proceed to next form
     if (_isFormEmpty(viewModel)) {
       Navigator.push(
         context,
@@ -111,7 +116,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
       return;
     }
 
-    // 2. IF FILLED: Save / Update in Firestore and proceed
     final bool success = await viewModel.saveDataAndProceed(
       locationName: _locationNameCtrl.text.trim(),
       beneficiariesCount: _beneficiariesCtrl.text.trim(),
@@ -214,11 +218,9 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Collector Location Card
             _buildCollectorLocationCard(viewModel),
             const SizedBox(height: 16),
 
-            // Active Edit Mode Banner
             if (viewModel.editingDocId != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
@@ -253,7 +255,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
               const SizedBox(height: 16),
             ],
 
-            // Agriculture Form Card
             _buildCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -374,7 +375,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
             ),
             const SizedBox(height: 24),
 
-            // Dynamic Action Button: Save (if filled) OR Next (if empty)
             ElevatedButton.icon(
               onPressed: (viewModel.isSaving || viewModel.isLoadingUser)
                   ? null
@@ -426,7 +426,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
 
             const SizedBox(height: 32),
 
-            // Entered Data Records Section
             _buildEnteredRecordsSection(viewModel),
 
             const SizedBox(height: 40),
@@ -436,7 +435,6 @@ class _AgricultureFormViewState extends State<_AgricultureFormView> {
     );
   }
 
-  /// Displays all already entered data fields for this GN Division
   Widget _buildEnteredRecordsSection(AgricultureViewModel viewModel) {
     if (viewModel.gnDivision == null || viewModel.gnDivision!.isEmpty) {
       return const SizedBox.shrink();

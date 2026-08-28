@@ -6,19 +6,29 @@ import 'infrastructure_view_model.dart';
 import 'agriculture_form_screen.dart';
 
 class InfrastructureFormScreen extends StatelessWidget {
-  const InfrastructureFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  // Added parameters to receive data from the dashboard
+  const InfrastructureFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => InfrastructureViewModel(),
-      child: const _InfrastructureFormView(),
+      child: _InfrastructureFormView(
+        editDocId: editDocId,
+        editData: editData,
+      ),
     );
   }
 }
 
 class _InfrastructureFormView extends StatefulWidget {
-  const _InfrastructureFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _InfrastructureFormView({this.editDocId, this.editData});
 
   @override
   State<_InfrastructureFormView> createState() =>
@@ -46,6 +56,14 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
     _bridgeNameCtrl.addListener(_onFormFieldChanged);
     _bridgeConditionCtrl.addListener(_onFormFieldChanged);
     _bridgeBeneficiariesCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<InfrastructureViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {
@@ -108,13 +126,6 @@ class _InfrastructureFormViewState extends State<_InfrastructureFormView> {
     vm.updateBridgeType((bridgeData['bridge_type'] ?? '').toString().isNotEmpty
         ? bridgeData['bridge_type']
         : null);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('තෝරාගත් දත්ත පෝරමයට ඇතුළත් කරන ලදී.'),
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _clearForm(InfrastructureViewModel vm) {

@@ -6,19 +6,25 @@ import 'proposals_view_model.dart';
 import 'disasters_form_screen.dart';
 
 class ProposalsFormScreen extends StatelessWidget {
-  const ProposalsFormScreen({super.key});
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const ProposalsFormScreen({super.key, this.editDocId, this.editData});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => ProposalsViewModel(),
-      child: const _ProposalsFormView(),
+      child: _ProposalsFormView(editDocId: editDocId, editData: editData),
     );
   }
 }
 
 class _ProposalsFormView extends StatefulWidget {
-  const _ProposalsFormView();
+  final String? editDocId;
+  final Map<String, dynamic>? editData;
+
+  const _ProposalsFormView({this.editDocId, this.editData});
 
   @override
   State<_ProposalsFormView> createState() => _ProposalsFormViewState();
@@ -33,6 +39,14 @@ class _ProposalsFormViewState extends State<_ProposalsFormView> {
     super.initState();
     _projectCtrl.addListener(_onFormFieldChanged);
     _beneficiariesCtrl.addListener(_onFormFieldChanged);
+
+    // --- NEW: Auto-populate form if data was passed from the Dashboard ---
+    if (widget.editDocId != null && widget.editData != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final vm = context.read<ProposalsViewModel>();
+        _populateFormFromDoc(widget.editDocId!, widget.editData!, vm);
+      });
+    }
   }
 
   void _onFormFieldChanged() {
