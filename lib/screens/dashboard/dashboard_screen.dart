@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../widgets/app_button.dart';
 import '../../core/app_constants.dart';
 import '../../data/auth_repository.dart';
+import 'profile_screen.dart'; // Import the new profile screen
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -29,6 +30,20 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
         ),
+        actions: [
+          // --- NEW: Profile Button ---
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfileScreen()),
+              );
+            },
+            icon: const Icon(Icons.account_circle, color: Colors.blue, size: 32),
+            tooltip: 'මගේ ගිණුම (My Profile)',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Padding(

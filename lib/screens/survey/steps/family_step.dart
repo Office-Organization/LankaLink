@@ -13,6 +13,9 @@ class FamilyStep extends StatefulWidget {
 }
 
 class _FamilyStepState extends State<FamilyStep> {
+  // Retains the last searched house number across searches and widget rebuilds
+  static String _lastSearchedHouseNumber = '';
+
   final _houseNumberCtrl = TextEditingController();
   final _specialCountCtrl = TextEditingController();
   final _specialAmountCtrl = TextEditingController();
@@ -26,6 +29,19 @@ class _FamilyStepState extends State<FamilyStep> {
     _specialCountCtrl.addListener(_updateSpecialNeeds);
     _specialAmountCtrl.addListener(_updateSpecialNeeds);
     _specialDescCtrl.addListener(_updateSpecialNeeds);
+
+    // Automatically fill the search bar with the last searched item
+    final currentHouseNumber = context.read<SurveyViewModel>().survey.houseNumber;
+    if (_lastSearchedHouseNumber.isNotEmpty) {
+      _houseNumberCtrl.text = _lastSearchedHouseNumber;
+    } else if (currentHouseNumber.isNotEmpty) {
+      _houseNumberCtrl.text = currentHouseNumber;
+    }
+
+    // Place the cursor at the end of the text
+    _houseNumberCtrl.selection = TextSelection.fromPosition(
+      TextPosition(offset: _houseNumberCtrl.text.length),
+    );
   }
 
   void _updateSpecialNeeds() {
@@ -38,6 +54,26 @@ class _FamilyStepState extends State<FamilyStep> {
     final amount = amountText.isEmpty ? 0.0 : (double.tryParse(amountText) ?? 0.0);
     
     context.read<SurveyViewModel>().updateSpecialNeeds(count, amount, descText);
+  }
+
+  Future<void> _handleSearch([String? query]) async {
+    final text = (query ?? _houseNumberCtrl.text).trim();
+    if (text.isEmpty) return;
+
+    FocusScope.of(context).unfocus();
+
+    // Update the last searched number for subsequent searches
+    _lastSearchedHouseNumber = text;
+    _houseNumberCtrl.text = text;
+    _houseNumberCtrl.selection = TextSelection.fromPosition(
+      TextPosition(offset: _houseNumberCtrl.text.length),
+    );
+
+    final vm = context.read<SurveyViewModel>();
+    await vm.searchHouse(text);
+    if (mounted) {
+      setState(() => _isEditingSpecialNeeds = false);
+    }
   }
 
   @override
@@ -89,7 +125,7 @@ class _FamilyStepState extends State<FamilyStep> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('විශේෂ අවශ්‍යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('විශේෂ අවශ්යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
                 onPressed: () {
@@ -133,7 +169,7 @@ class _FamilyStepState extends State<FamilyStep> {
           if (family.specialNeedDescription.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              'අවශ්‍යතාවය: ${family.specialNeedDescription}', 
+              'අවශ්යතාවය: ${family.specialNeedDescription}', 
               style: const TextStyle(fontSize: 14, color: Colors.black54)
             ),
           ],
@@ -147,7 +183,7 @@ class _FamilyStepState extends State<FamilyStep> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('විශේෂ අවශ්‍යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text('විශේෂ අවශ්යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
             if (hasData) 
               IconButton(
                 icon: const Icon(Icons.check, color: Colors.green, size: 20),
@@ -179,7 +215,7 @@ class _FamilyStepState extends State<FamilyStep> {
         TextField(
           controller: _specialDescCtrl,
           decoration: const InputDecoration(
-            labelText: 'විශේෂ අවශ්‍යතාවය කුමක්ද? (විකල්ප)', 
+            labelText: 'විශේෂ අවශ්යතාවය කුමක්ද? (විකල්ප)', 
             hintText: 'උදා: ආබාධිත / නිදන්ගත රෝග',
           ),
         ),
@@ -221,13 +257,7 @@ class _FamilyStepState extends State<FamilyStep> {
                     contentPadding: const EdgeInsets.only(left: 10), 
                     suffixIcon: IconButton(
                       icon: const Icon(Icons.search, color: AppColors.primary),
-                      onPressed: () async {
-                        FocusScope.of(context).unfocus(); 
-                        if (_houseNumberCtrl.text.isNotEmpty) {
-                          await vm.searchHouse(_houseNumberCtrl.text);
-                          setState(() => _isEditingSpecialNeeds = false);
-                        }
-                      },
+                      onPressed: () => _handleSearch(),
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -238,12 +268,7 @@ class _FamilyStepState extends State<FamilyStep> {
                       borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
                     ),
                   ),
-                  onSubmitted: (value) async {
-                    if (value.isNotEmpty) {
-                      await vm.searchHouse(value);
-                      setState(() => _isEditingSpecialNeeds = false);
-                    }
-                  },
+                  onSubmitted: (value) => _handleSearch(value),
                 ),
               ),
             ),
@@ -266,7 +291,7 @@ class _FamilyStepState extends State<FamilyStep> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'අස්වැසුම ප්‍රතිලාභ',
+                      'අස්වැසුම ප්රතිලාභ',
                       style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     Row(
@@ -339,7 +364,6 @@ class _FamilyStepState extends State<FamilyStep> {
   }
 
   Widget _buildMemberTile(BuildContext context, FamilyMember member) {
-    // Calculate the accurate age using the helper method
     final displayAge = _calculateAgeFromNIC(member.nic, member.age);
 
     return Container(
@@ -356,12 +380,11 @@ class _FamilyStepState extends State<FamilyStep> {
         leading: CircleAvatar(
           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
           child: Icon(
-            member.gender == 'ස්ත්‍රී' ? Icons.face_3 : Icons.face,
+            member.gender == 'ස්ත්රී' ? Icons.face_3 : Icons.face,
             color: AppColors.primary,
           ),
         ),
         title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-        // Updated the subtitle to use dynamically calculated displayAge
         subtitle: Text('වයස: $displayAge | NIC: ${member.nic.isEmpty ? "-" : member.nic}', style: const TextStyle(fontSize: 12)),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
