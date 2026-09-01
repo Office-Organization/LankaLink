@@ -36,8 +36,10 @@ flutter:
 
   assets:
     - assets/images/
-    - assets/fonts/UN-Ganganee.ttf
+    - assets/fonts/AbhayaLibre-Regular.ttf
     - assets/fonts/UN-Samantha.ttf
+    - assets/fonts/UN-Ganganee.ttf
+    - assets/fonts/UN-Basuru.ttf   
 
   fonts:
     - family: UNSamantha
