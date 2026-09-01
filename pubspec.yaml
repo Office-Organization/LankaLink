@@ -20,6 +20,10 @@ dependencies:
   uuid: ^4.6.0
   google_maps_flutter: ^2.18.0
   shared_preferences: ^2.2.2
+  csv: ^5.0.2
+  pdf: ^3.10.4
+  path_provider: ^2.1.1
+  printing: ^5.11.0
 
 dev_dependencies:
   flutter_test:
@@ -32,6 +36,8 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/fonts/UN-Ganganee.ttf
+    - assets/fonts/UN-Samantha.ttf
 
   fonts:
     - family: UNSamantha

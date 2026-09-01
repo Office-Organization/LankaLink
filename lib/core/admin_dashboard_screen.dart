@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../data/auth_repository.dart';
 import 'admin_location_manager_screen.dart';
 import 'admin_survey_data_manager_screen.dart';
+import 'poverty_analytics_screen.dart'; // Make sure this path is correct for your project structure
 
 /// Admin dashboard featuring analytics, member management,
 /// user activation/deactivation, dropdown field data feeder, and database explorer.
@@ -406,6 +407,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           // Field Surveys Hub Card
           _buildFieldDataManagementCard(),
 
+          // New Poverty Analytics Card Added Here
+          _buildPovertyAnalyticsCard(),
+
           const SizedBox(height: 12),
 
           // Location Manager Card
@@ -445,6 +449,90 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
           const SizedBox(height: 10),
           _buildRecentUsersFeed(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPovertyAnalyticsCard() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.only(top: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8B5CF6), Color(0xFF6D28D9)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF6D28D9).withOpacity(0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.analytics_outlined,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'ප්‍රජා ශක්ති Analytics',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Download & analyze poverty alleviation data',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: const Color(0xFF6D28D9),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const PovertyAnalyticsScreen(),
+                ),
+              );
+            },
+            child: const Text(
+              'View Data',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );
