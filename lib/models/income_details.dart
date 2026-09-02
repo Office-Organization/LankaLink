@@ -21,13 +21,12 @@ class IncomeDetails {
   
   final String fishingType;
 
-  // 🟢 අලුතින් එකතු කළ ලොග් විස්තර (Log details)
+  // 🟢 ලොග් විස්තර (Log details)
   final String? updatedBy;
   final DateTime? updatedAt;
 
   IncomeDetails({
     this.houseNumber = '',
-    // 🟢 සියලුම Default අගයන් හිස් (Empty) කර ඇත
     this.mainIncome = '',
     this.extraIncome = '',
     this.jobType = '',
@@ -41,8 +40,8 @@ class IncomeDetails {
     this.animalHusbandryOther = '',
     this.animalCount = '',
     this.fishingType = '',
-    this.updatedBy, // 🟢
-    this.updatedAt, // 🟢
+    this.updatedBy,
+    this.updatedAt,
   });
 
   IncomeDetails copyWith({
@@ -60,8 +59,8 @@ class IncomeDetails {
     String? animalHusbandryOther,
     String? animalCount,
     String? fishingType,
-    String? updatedBy,    // 🟢
-    DateTime? updatedAt,  // 🟢
+    String? updatedBy,
+    DateTime? updatedAt,
   }) {
     return IncomeDetails(
       houseNumber: houseNumber ?? this.houseNumber,
@@ -78,8 +77,8 @@ class IncomeDetails {
       animalHusbandryOther: animalHusbandryOther ?? this.animalHusbandryOther,
       animalCount: animalCount ?? this.animalCount,
       fishingType: fishingType ?? this.fishingType,
-      updatedBy: updatedBy ?? this.updatedBy, // 🟢
-      updatedAt: updatedAt ?? this.updatedAt, // 🟢
+      updatedBy: updatedBy ?? this.updatedBy,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -103,7 +102,6 @@ class IncomeDetails {
   };
 
   factory IncomeDetails.fromMap(Map<String, dynamic> map) {
-    // 🟢 Timestamp සහ DateTime නිවැරදිව හසුරුවන කොටස
     DateTime? parsedDate;
     if (map['updatedAt'] != null) {
       final t = map['updatedAt'];
@@ -131,8 +129,8 @@ class IncomeDetails {
       animalHusbandryOther: map['animalHusbandryOther']?.toString() ?? '',
       animalCount: map['animalCount']?.toString() ?? '',
       fishingType: map['fishingType']?.toString() ?? '',
-      updatedBy: map['updatedBy']?.toString(), // 🟢
-      updatedAt: parsedDate,                   // 🟢
+      updatedBy: map['updatedBy']?.toString(),
+      updatedAt: parsedDate,
     );
   }
 }

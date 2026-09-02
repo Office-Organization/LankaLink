@@ -2,17 +2,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/survey.dart';
-import '../models/basic_details.dart' as bd;
+import '../models/basic_details.dart' as bd; 
 import '../models/housing_details.dart';
 import '../models/income_details.dart';
 import '../models/assets_details.dart';
 
 class SurveyRepository {
   SurveyRepository(this._db);
-
+  
   final FirebaseFirestore _db;
   final String _collection = 'survey_responses';
 
+  // 🟢 UID එක මඟින් users collection එකෙන් නම සෙවීමේ උපකාරක ක්‍රමය
   Future<String> _getUserName(String? uid) async {
     if (uid == null || uid.isEmpty) return 'පද්ධතිය (System)';
     try {
@@ -29,6 +30,10 @@ class SurveyRepository {
     return uid;
   }
 
+  // ==========================================
+  // පවුලේ මූලික තොරතුරු සහ සාමාජිකයන් (Survey)
+  // ==========================================
+
   Future<Survey?> getSurveyByHouseNumber(String houseNumber) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -39,20 +44,17 @@ class SurveyRepository {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
       if (!doc.exists || doc.data() == null) return null;
-
+      
       final data = doc.data()!;
-
-      // UID එක නම මඟින් ප්‍රතිස්ථාපනය කිරීම
+      
       if (data.containsKey('updatedBy')) {
         data['updatedBy'] = await _getUserName(data['updatedBy']?.toString());
       }
-
+      
       return Survey.fromMap(data);
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
-        throw Exception(
-          'Firebase Permission Error: Make sure Firestore rules allow reads for authenticated users.',
-        );
+        throw Exception('Firebase Permission Error.');
       }
       rethrow;
     } catch (e) {
@@ -64,7 +66,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
-
+      
       List<Map<String, dynamic>> membersData = family.members
           .map(
             (m) => {
@@ -95,15 +97,13 @@ class SurveyRepository {
   }
 
   // ==========================================
-  // Basic Details (පවුලේ මූලික තොරතුරු සහ සාමාජිකයන්)
+  // Basic Details
   // ==========================================
 
   Future<bd.BasicDetails?> getBasicDetails(String houseNumber) async {
     try {
       final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw Exception('Auth Error: Please sign in to access family data.');
-      }
+      if (user == null) throw Exception('Auth Error.');
 
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
@@ -111,14 +111,14 @@ class SurveyRepository {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('basicDetails')) {
-          final mapData = Map<String, dynamic>.from(
-            data['basicDetails'] as Map,
-          );
+          final mapData = Map<String, dynamic>.from(data['basicDetails'] as Map);
 
-          // BasicDetails සඳහාද UID එක නම මඟින් මාරු කිරීම
-          final uid = data['basicDetailsUpdatedBy']?.toString();
-          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
-          mapData['updatedAt'] = data['basicDetailsUpdatedAt'];
+          final rootUid = data['basicDetailsUpdatedBy']?.toString();
+          final nestedUid = mapData['updatedBy']?.toString();
+          final finalUid = rootUid ?? nestedUid;
+
+          mapData['updatedBy'] = finalUid != null ? await _getUserName(finalUid) : null;
+          mapData['updatedAt'] = data['basicDetailsUpdatedAt'] ?? mapData['updatedAt'];
 
           return bd.BasicDetails.fromMap(mapData);
         } else {
@@ -130,45 +130,33 @@ class SurveyRepository {
             headName: adults.isNotEmpty ? adults.first.name : '',
             nic: adults.isNotEmpty ? adults.first.nic : '',
             headGender: adults.isNotEmpty ? adults.first.gender : 'පුරුෂ',
-            members: survey.family.members
-                .map(
-                  (m) => bd.FamilyMember(
-                    id: m.id,
-                    fullName: m.name,
-                    nic: m.nic,
-                    dob: m.birthday.toIso8601String(),
-                    age: m.age,
-                    gender: m.gender,
-                    isAdult: m.isAdult,
-                  ),
-                )
-                .toList(),
+            members: survey.family.members.map((m) => bd.FamilyMember(
+              id: m.id, fullName: m.name, nic: m.nic, dob: m.birthday.toIso8601String(),
+              age: m.age, gender: m.gender, isAdult: m.isAdult,
+            )).toList(),
           );
         }
       }
       return null;
-    } on FirebaseException catch (e) {
-      if (e.code == 'permission-denied') {
-        throw Exception(
-          'Firebase Permission Error: Make sure you are signed in and have proper access to this data.',
-        );
-      }
-      rethrow;
     } catch (e) {
       rethrow;
     }
   }
 
-  Future<void> saveBasicDetails(
-    String houseNumber,
-    bd.BasicDetails details,
-  ) async {
+  Future<void> saveBasicDetails(String houseNumber, bd.BasicDetails details) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      
+      Map<String, dynamic> detailsMap = details.toMap();
+      detailsMap['updatedBy'] = uid;
+      detailsMap['updatedAt'] = DateTime.now().toIso8601String();
+
       await ref.set({
-        'basicDetails': details.toMap(),
-        'basicDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'basicDetails': detailsMap,
+        'basicDetailsUpdatedBy': uid,
         'basicDetailsUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -177,7 +165,7 @@ class SurveyRepository {
   }
 
   // ==========================================
-  // Housing Details (නිවාස තොරතුරු)
+  // Housing Details
   // ==========================================
 
   Future<HousingDetails?> getHousingDetails(String houseNumber) async {
@@ -188,14 +176,14 @@ class SurveyRepository {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('housingDetails')) {
-          final mapData = Map<String, dynamic>.from(
-            data['housingDetails'] as Map,
-          );
+          final mapData = Map<String, dynamic>.from(data['housingDetails'] as Map);
 
-          // 🔥 නිවාස තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම
-          final uid = data['housingDetailsUpdatedBy']?.toString();
-          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
-          mapData['updatedAt'] = data['housingDetailsUpdatedAt'];
+          final rootUid = data['housingDetailsUpdatedBy']?.toString();
+          final nestedUid = mapData['updatedBy']?.toString();
+          final finalUid = rootUid ?? nestedUid;
+
+          mapData['updatedBy'] = finalUid != null ? await _getUserName(finalUid) : null;
+          mapData['updatedAt'] = data['housingDetailsUpdatedAt'] ?? mapData['updatedAt'];
 
           return HousingDetails.fromMap(mapData);
         }
@@ -206,16 +194,20 @@ class SurveyRepository {
     }
   }
 
-  Future<void> saveHousingDetails(
-    String houseNumber,
-    HousingDetails details,
-  ) async {
+  Future<void> saveHousingDetails(String houseNumber, HousingDetails details) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      
+      Map<String, dynamic> detailsMap = details.toMap();
+      detailsMap['updatedBy'] = uid;
+      detailsMap['updatedAt'] = DateTime.now().toIso8601String();
+
       await ref.set({
-        'housingDetails': details.toMap(),
-        'housingDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'housingDetails': detailsMap,
+        'housingDetailsUpdatedBy': uid,
         'housingDetailsUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -224,7 +216,7 @@ class SurveyRepository {
   }
 
   // ==========================================
-  // Income Details (ආදායම් තොරතුරු)
+  // Income Details
   // ==========================================
 
   Future<IncomeDetails?> getIncomeDetails(String houseNumber) async {
@@ -235,14 +227,14 @@ class SurveyRepository {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('incomeDetails')) {
-          final mapData = Map<String, dynamic>.from(
-            data['incomeDetails'] as Map,
-          );
+          final mapData = Map<String, dynamic>.from(data['incomeDetails'] as Map);
 
-          // 🔥 ආදායම් තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම
-          final uid = data['incomeDetailsUpdatedBy']?.toString();
-          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
-          mapData['updatedAt'] = data['incomeDetailsUpdatedAt'];
+          final rootUid = data['incomeDetailsUpdatedBy']?.toString();
+          final nestedUid = mapData['updatedBy']?.toString();
+          final finalUid = rootUid ?? nestedUid;
+
+          mapData['updatedBy'] = finalUid != null ? await _getUserName(finalUid) : null;
+          mapData['updatedAt'] = data['incomeDetailsUpdatedAt'] ?? mapData['updatedAt'];
 
           return IncomeDetails.fromMap(mapData);
         }
@@ -253,16 +245,20 @@ class SurveyRepository {
     }
   }
 
-  Future<void> saveIncomeDetails(
-    String houseNumber,
-    IncomeDetails details,
-  ) async {
+  Future<void> saveIncomeDetails(String houseNumber, IncomeDetails details) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      Map<String, dynamic> detailsMap = details.toMap();
+      detailsMap['updatedBy'] = uid;
+      detailsMap['updatedAt'] = DateTime.now().toIso8601String();
+
       await ref.set({
-        'incomeDetails': details.toMap(),
-        'incomeDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'incomeDetails': detailsMap,
+        'incomeDetailsUpdatedBy': uid,
         'incomeDetailsUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {
@@ -271,7 +267,7 @@ class SurveyRepository {
   }
 
   // ==========================================
-  // Assets Details (වත්කම් තොරතුරු)
+  // Assets Details (නිශ්චල හා චංචල දේපල)
   // ==========================================
 
   Future<AssetsDetails?> getAssetsDetails(String houseNumber) async {
@@ -282,14 +278,14 @@ class SurveyRepository {
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('assetsDetails')) {
-          final mapData = Map<String, dynamic>.from(
-            data['assetsDetails'] as Map,
-          );
+          final mapData = Map<String, dynamic>.from(data['assetsDetails'] as Map);
 
-          // 🔥 වත්කම් තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම
-          final uid = data['assetsDetailsUpdatedBy']?.toString();
-          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
-          mapData['updatedAt'] = data['assetsDetailsUpdatedAt'];
+          final rootUid = data['assetsDetailsUpdatedBy']?.toString();
+          final nestedUid = mapData['updatedBy']?.toString();
+          final finalUid = rootUid ?? nestedUid;
+
+          mapData['updatedBy'] = finalUid != null ? await _getUserName(finalUid) : null;
+          mapData['updatedAt'] = data['assetsDetailsUpdatedAt'] ?? mapData['updatedAt'];
 
           return AssetsDetails.fromMap(mapData);
         }
@@ -300,16 +296,20 @@ class SurveyRepository {
     }
   }
 
-  Future<void> saveAssetsDetails(
-    String houseNumber,
-    AssetsDetails details,
-  ) async {
+  Future<void> saveAssetsDetails(String houseNumber, AssetsDetails details) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
+      
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+
+      Map<String, dynamic> detailsMap = details.toMap();
+      detailsMap['updatedBy'] = uid;
+      detailsMap['updatedAt'] = DateTime.now().toIso8601String();
+
       await ref.set({
-        'assetsDetails': details.toMap(),
-        'assetsDetailsUpdatedBy': FirebaseAuth.instance.currentUser?.uid,
+        'assetsDetails': detailsMap,
+        'assetsDetailsUpdatedBy': uid,
         'assetsDetailsUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
     } catch (e) {

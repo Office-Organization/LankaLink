@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/app_theme.dart';
 import 'assets_view_model.dart';
-import '../../widgets/app_button.dart'; // AppButton එක ඇතුළත් කර ඇත
+import '../../widgets/app_button.dart'; 
 
 class MovableAssetsScreen extends StatefulWidget {
   const MovableAssetsScreen({super.key});
@@ -75,6 +75,9 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
                   // නව View/Edit ලොජික් එක ඇතුළත් කළ චංචල දේපල තොරතුරු කොටස
                   _buildMovableSection(details, vm),
 
+                  // 🟢 දත්ත යාවත්කාලීන කළ ලොගය (Update Log)
+                  _buildUpdateLog(details.updatedBy, details.updatedAt),
+
                   const SizedBox(height: 40),
 
                   // Submit Data Button (AppButton)
@@ -82,9 +85,13 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
                     label: 'සුරකින්න',
                     isLoading: vm.isBusy,
                     onPressed: () async {
+                      // 🟢 Buffering දෝෂය වළක්වා ගැනීමට Navigator/Messenger කලින් ලබා ගැනීම
+                      final navigator = Navigator.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+
                       final success = await vm.save();
-                      if (success && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                      if (success) {
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(
                             content: Text(
                               'තොරතුරු සාර්ථකව සුරැකිණි!',
@@ -93,7 +100,7 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
                             backgroundColor: Color.fromARGB(241, 159, 6, 98),
                           ),
                         );
-                        Navigator.pop(context); // ආපසු Assets Main තිරයට
+                        navigator.pop(); // ආපසු Assets Main තිරයට
                       }
                     },
                   ),
@@ -106,7 +113,7 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
 
   // View Mode සහ Edit Mode පාලනය කරන ප්‍රධාන කොටස
   Widget _buildMovableSection(dynamic details, AssetsViewModel vm) {
-    // වාහන එකක් හෝ තෝරා ඇත්දැයි පරීක්ෂා කිරීම (hasData තීරණය කිරීමට)
+    // වාහන එකක් හෝ තෝරා ඇත්දැයි පරීක්ෂා කිරීම
     final hasData = details.hasBike || details.hasThreeWheeler || details.hasVan || 
                     details.hasLorry || details.hasBus || details.hasTractor || 
                     details.hasCar || details.hasCab || details.hasOtherVehicle;
@@ -174,20 +181,20 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildCheckRow(
-                'බයික්', details.hasBike, (v) => vm.updateField(hasBike: v),
-                'ත්‍රී වීල්', details.hasThreeWheeler, (v) => vm.updateField(hasThreeWheeler: v),
+                'බයික්', details.hasBike ?? false, (v) => vm.updateField(hasBike: v),
+                'ත්‍රී වීල්', details.hasThreeWheeler ?? false, (v) => vm.updateField(hasThreeWheeler: v),
               ),
               _buildCheckRow(
-                'වෑන්', details.hasVan, (v) => vm.updateField(hasVan: v),
-                'ලොරි', details.hasLorry, (v) => vm.updateField(hasLorry: v),
+                'වෑන්', details.hasVan ?? false, (v) => vm.updateField(hasVan: v),
+                'ලොරි', details.hasLorry ?? false, (v) => vm.updateField(hasLorry: v),
               ),
               _buildCheckRow(
-                'බස්', details.hasBus, (v) => vm.updateField(hasBus: v),
-                'ට්‍රැක්ටර්', details.hasTractor, (v) => vm.updateField(hasTractor: v),
+                'බස්', details.hasBus ?? false, (v) => vm.updateField(hasBus: v),
+                'ට්‍රැක්ටර්', details.hasTractor ?? false, (v) => vm.updateField(hasTractor: v),
               ),
               _buildCheckRow(
-                'කාර්', details.hasCar, (v) => vm.updateField(hasCar: v),
-                'කැබ්', details.hasCab, (v) => vm.updateField(hasCab: v),
+                'කාර්', details.hasCar ?? false, (v) => vm.updateField(hasCar: v),
+                'කැබ්', details.hasCab ?? false, (v) => vm.updateField(hasCab: v),
               ),
               Row(
                 children: [
@@ -204,7 +211,7 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
                         ),
                         const Spacer(),
                         Checkbox(
-                          value: details.hasOtherVehicle,
+                          value: details.hasOtherVehicle ?? false,
                           activeColor: AppColors.primary,
                           onChanged: (v) => vm.updateField(hasOtherVehicle: v),
                         ),
@@ -223,7 +230,6 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
 
   // --- Helper Methods ---
 
-  // තෝරාගත් වාහන ලැයිස්තුව View Mode එක සඳහා සැකසීම
   String _getSelectedVehicles(dynamic details) {
     List<String> vehicles = [];
     if (details.hasBike) vehicles.add('බයික්');
@@ -318,6 +324,65 @@ class _MovableAssetsScreenState extends State<MovableAssetsScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  // 🟢 ලොගය පෙන්වන Widget එක 
+  Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
+    if (updatedBy == null && updatedAt == null) {
+      return Container(
+        margin: const EdgeInsets.only(top: 24),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.green.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'මෙම ගෙදරට අදාළව මින් පෙර චංචල දේපල තොරතුරු පද්ධතියට ඇතුළත් කර නොමැත. මෙය නව ඇතුළත් කිරීමකි.',
+                style: TextStyle(fontFamily: 'UNGanganee', fontSize: 14, color: Colors.green.shade900),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final dateStr = updatedAt != null 
+        ? "${updatedAt.year}-${updatedAt.month.toString().padLeft(2, '0')}-${updatedAt.day.toString().padLeft(2, '0')}  |  ${updatedAt.hour}:${updatedAt.minute.toString().padLeft(2, '0')}" 
+        : "නොදන්නා දිනයකි";
+        
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blueGrey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 20, color: Colors.blueGrey.shade700),
+              const SizedBox(width: 8),
+              Text('දත්ත යාවත්කාලීන ලොගය', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueGrey.shade800)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('අවසන් වරට වෙනස් කළේ: $updatedBy', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+          const SizedBox(height: 4),
+          Text('දිනය සහ වේලාව: $dateStr', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
         ],
       ),
     );

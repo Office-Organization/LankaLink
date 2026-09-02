@@ -1,19 +1,21 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // 🔥 Timestamp හැසිරවීමට මෙය අත්‍යවශ්‍යයි
+
 class AssetsDetails {
   final String houseNumber;
 
   // නිශ්චල - ගොඩ
-  final bool hasHighland;
+  final bool? hasHighland; // 🟢 Radio button හිස්ව තැබීමට bool?
   final String highlandExtent;
-  final bool isHighlandCultivated;
+  final bool? isHighlandCultivated; // 🟢 Radio button හිස්ව තැබීමට bool?
   final bool hlNoWater;
   final bool hlAnimalDamage;
   final bool hlMoneyLabor;
   final bool hlOther;
 
   // නිශ්චල - මඩ
-  final bool hasMudland;
+  final bool? hasMudland; // 🟢 Radio button හිස්ව තැබීමට bool?
   final String mudlandExtent;
-  final bool isMudlandCultivated;
+  final bool? isMudlandCultivated; // 🟢 Radio button හිස්ව තැබීමට bool?
   final bool mlNoWater;
   final bool mlAnimalDamage;
   final bool mlMoneyLabor;
@@ -32,18 +34,23 @@ class AssetsDetails {
   final bool hasCab;
   final bool hasOtherVehicle;
 
+  // 🟢 අලුතින් එකතු කළ ලොග් විස්තර (Log details)
+  final String? updatedBy;
+  final DateTime? updatedAt;
+
   AssetsDetails({
     this.houseNumber = '',
-    this.hasHighland = true,
+    // 🟢 Default 'true'/'false' අගයන් ඉවත් කර ඇත (null ලෙස පවතී)
+    this.hasHighland, 
     this.highlandExtent = '',
-    this.isHighlandCultivated = true,
+    this.isHighlandCultivated, 
     this.hlNoWater = false,
     this.hlAnimalDamage = false,
     this.hlMoneyLabor = false,
     this.hlOther = false,
-    this.hasMudland = false,
+    this.hasMudland,
     this.mudlandExtent = '',
-    this.isMudlandCultivated = true,
+    this.isMudlandCultivated, 
     this.mlNoWater = false,
     this.mlAnimalDamage = false,
     this.mlMoneyLabor = false,
@@ -59,6 +66,8 @@ class AssetsDetails {
     this.hasCar = false,
     this.hasCab = false,
     this.hasOtherVehicle = false,
+    this.updatedBy, // 🟢
+    this.updatedAt, // 🟢
   });
 
   AssetsDetails copyWith({
@@ -88,6 +97,8 @@ class AssetsDetails {
     bool? hasCar,
     bool? hasCab,
     bool? hasOtherVehicle,
+    String? updatedBy,    // 🟢
+    DateTime? updatedAt,  // 🟢
   }) {
     return AssetsDetails(
       houseNumber: houseNumber ?? this.houseNumber,
@@ -116,6 +127,8 @@ class AssetsDetails {
       hasCar: hasCar ?? this.hasCar,
       hasCab: hasCab ?? this.hasCab,
       hasOtherVehicle: hasOtherVehicle ?? this.hasOtherVehicle,
+      updatedBy: updatedBy ?? this.updatedBy, // 🟢
+      updatedAt: updatedAt ?? this.updatedAt, // 🟢
     );
   }
 
@@ -146,21 +159,36 @@ class AssetsDetails {
     'hasCar': hasCar,
     'hasCab': hasCab,
     'hasOtherVehicle': hasOtherVehicle,
+    'updatedBy': updatedBy,
+    'updatedAt': updatedAt?.toIso8601String(),
   };
 
   factory AssetsDetails.fromMap(Map<String, dynamic> map) {
+    // 🟢 Timestamp සහ DateTime නිවැරදිව හසුරුවන කොටස
+    DateTime? parsedDate;
+    if (map['updatedAt'] != null) {
+      final t = map['updatedAt'];
+      if (t is Timestamp) { 
+        parsedDate = t.toDate();
+      } else if (t is DateTime) {
+        parsedDate = t;
+      } else {
+        parsedDate = DateTime.tryParse(t.toString());
+      }
+    }
+
     return AssetsDetails(
       houseNumber: map['houseNumber']?.toString() ?? '',
-      hasHighland: map['hasHighland'] as bool? ?? true,
+      hasHighland: map['hasHighland'] as bool?,
       highlandExtent: map['highlandExtent']?.toString() ?? '',
-      isHighlandCultivated: map['isHighlandCultivated'] as bool? ?? true,
+      isHighlandCultivated: map['isHighlandCultivated'] as bool?,
       hlNoWater: map['hlNoWater'] as bool? ?? false,
       hlAnimalDamage: map['hlAnimalDamage'] as bool? ?? false,
       hlMoneyLabor: map['hlMoneyLabor'] as bool? ?? false,
       hlOther: map['hlOther'] as bool? ?? false,
-      hasMudland: map['hasMudland'] as bool? ?? false,
+      hasMudland: map['hasMudland'] as bool?,
       mudlandExtent: map['mudlandExtent']?.toString() ?? '',
-      isMudlandCultivated: map['isMudlandCultivated'] as bool? ?? true,
+      isMudlandCultivated: map['isMudlandCultivated'] as bool?,
       mlNoWater: map['mlNoWater'] as bool? ?? false,
       mlAnimalDamage: map['mlAnimalDamage'] as bool? ?? false,
       mlMoneyLabor: map['mlMoneyLabor'] as bool? ?? false,
@@ -176,6 +204,8 @@ class AssetsDetails {
       hasCar: map['hasCar'] as bool? ?? false,
       hasCab: map['hasCab'] as bool? ?? false,
       hasOtherVehicle: map['hasOtherVehicle'] as bool? ?? false,
+      updatedBy: map['updatedBy']?.toString(), // 🟢
+      updatedAt: parsedDate,                   // 🟢
     );
   }
 }
