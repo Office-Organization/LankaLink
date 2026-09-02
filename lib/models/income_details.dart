@@ -9,6 +9,11 @@ class IncomeDetails {
   final String jobPosition;
   final String jobInstitute;
   
+  // 🟢 කුලී වැඩ සඳහා අලුතින් එක් කළ Fields
+  final String laborType;
+  final String laborOther;
+  final String dailyWage;
+  
   final String tourismType;
   final String tourismOther;
   
@@ -20,7 +25,7 @@ class IncomeDetails {
   final String animalCount;
   
   final String fishingType;
-  final String fishingOther; // 🟢 අලුතින් එකතු කළ කොටස
+  final String fishingOther;
   final String otherIncomeDesc;
 
   final String? updatedBy;
@@ -33,6 +38,9 @@ class IncomeDetails {
     this.jobType = '',
     this.jobPosition = '',
     this.jobInstitute = '',
+    this.laborType = '', // 🟢
+    this.laborOther = '', // 🟢
+    this.dailyWage = '', // 🟢
     this.tourismType = '',
     this.tourismOther = '',
     this.agricultureType = '',
@@ -41,7 +49,7 @@ class IncomeDetails {
     this.animalHusbandryOther = '',
     this.animalCount = '',
     this.fishingType = '',
-    this.fishingOther = '', // 🟢
+    this.fishingOther = '',
     this.otherIncomeDesc = '',
     this.updatedBy,
     this.updatedAt,
@@ -54,6 +62,9 @@ class IncomeDetails {
     String? jobType,
     String? jobPosition,
     String? jobInstitute,
+    String? laborType, // 🟢
+    String? laborOther, // 🟢
+    String? dailyWage, // 🟢
     String? tourismType,
     String? tourismOther,
     String? agricultureType,
@@ -62,7 +73,7 @@ class IncomeDetails {
     String? animalHusbandryOther,
     String? animalCount,
     String? fishingType,
-    String? fishingOther, // 🟢
+    String? fishingOther,
     String? otherIncomeDesc,
     String? updatedBy,
     DateTime? updatedAt,
@@ -74,6 +85,9 @@ class IncomeDetails {
       jobType: jobType ?? this.jobType,
       jobPosition: jobPosition ?? this.jobPosition,
       jobInstitute: jobInstitute ?? this.jobInstitute,
+      laborType: laborType ?? this.laborType, // 🟢
+      laborOther: laborOther ?? this.laborOther, // 🟢
+      dailyWage: dailyWage ?? this.dailyWage, // 🟢
       tourismType: tourismType ?? this.tourismType,
       tourismOther: tourismOther ?? this.tourismOther,
       agricultureType: agricultureType ?? this.agricultureType,
@@ -82,7 +96,7 @@ class IncomeDetails {
       animalHusbandryOther: animalHusbandryOther ?? this.animalHusbandryOther,
       animalCount: animalCount ?? this.animalCount,
       fishingType: fishingType ?? this.fishingType,
-      fishingOther: fishingOther ?? this.fishingOther, // 🟢
+      fishingOther: fishingOther ?? this.fishingOther,
       otherIncomeDesc: otherIncomeDesc ?? this.otherIncomeDesc,
       updatedBy: updatedBy ?? this.updatedBy,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -96,6 +110,9 @@ class IncomeDetails {
     'jobType': jobType,
     'jobPosition': jobPosition,
     'jobInstitute': jobInstitute,
+    'laborType': laborType, // 🟢
+    'laborOther': laborOther, // 🟢
+    'dailyWage': dailyWage, // 🟢
     'tourismType': tourismType,
     'tourismOther': tourismOther,
     'agricultureType': agricultureType,
@@ -104,7 +121,7 @@ class IncomeDetails {
     'animalHusbandryOther': animalHusbandryOther,
     'animalCount': animalCount,
     'fishingType': fishingType,
-    'fishingOther': fishingOther, // 🟢
+    'fishingOther': fishingOther,
     'otherIncomeDesc': otherIncomeDesc,
     'updatedBy': updatedBy,
     'updatedAt': updatedAt?.toIso8601String(),
@@ -130,6 +147,9 @@ class IncomeDetails {
       jobType: map['jobType']?.toString() ?? '',
       jobPosition: map['jobPosition']?.toString() ?? '',
       jobInstitute: map['jobInstitute']?.toString() ?? '',
+      laborType: map['laborType']?.toString() ?? '', // 🟢
+      laborOther: map['laborOther']?.toString() ?? '', // 🟢
+      dailyWage: map['dailyWage']?.toString() ?? '', // 🟢
       tourismType: map['tourismType']?.toString() ?? '',
       tourismOther: map['tourismOther']?.toString() ?? '',
       agricultureType: map['agricultureType']?.toString() ?? '',
@@ -138,7 +158,7 @@ class IncomeDetails {
       animalHusbandryOther: map['animalHusbandryOther']?.toString() ?? '',
       animalCount: map['animalCount']?.toString() ?? '',
       fishingType: map['fishingType']?.toString() ?? '',
-      fishingOther: map['fishingOther']?.toString() ?? '', // 🟢
+      fishingOther: map['fishingOther']?.toString() ?? '',
       otherIncomeDesc: map['otherIncomeDesc']?.toString() ?? '',
       updatedBy: map['updatedBy']?.toString(),
       updatedAt: parsedDate,

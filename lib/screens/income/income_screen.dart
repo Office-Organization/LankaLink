@@ -290,7 +290,47 @@ class _IncomeScreenState extends State<IncomeScreen> {
           ],
           onChanged: (val) => vm.updateField(jobType: val),
         ),
-        if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
+        
+        // 🟢 කුලී වැඩ / දෛනික වැටුප් නම් පමණක් දිස්වන කොටස
+        if (details.jobType == 'කුලී වැඩ / දෛනික වැටුප්') ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.fieldFill, borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('කුලී වැඩේ ස්වභාවය', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                _buildDropdown(
+                  value: details.laborType,
+                  hintText: 'තෝරන්න',
+                  items: ['මේසන් වැඩ', 'වඩු වැඩ', 'අත් උදව්කරු', 'ඉඳිකිරීම් කම්කරු', 'වතු සුද්ද කිරීම / කෘෂි කුලී වැඩ', 'වෙනත්'],
+                  onChanged: (val) => vm.updateField(laborType: val),
+                ),
+                if (details.laborType == 'වෙනත්') ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    initialValue: details.laborOther,
+                    onChanged: (val) => vm.updateField(laborOther: val),
+                    decoration: _inputStyle(hint: 'කුමන ආකාරයේ වැඩක්ද?'),
+                  ),
+                ],
+                const SizedBox(height: 12),
+                const Text('දෛනික ආදායම (දවස් පඩිය)', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextFormField(
+                  initialValue: details.dailyWage,
+                  onChanged: (val) => vm.updateField(dailyWage: val),
+                  keyboardType: TextInputType.number,
+                  decoration: _inputStyle(hint: 'උදා: රු. 2500 - 3000'),
+                ),
+              ],
+            ),
+          ),
+        ] 
+        // 🟢 සාමාන්‍ය රැකියාවක් නම් දිස්වන කොටස
+        else if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
@@ -303,7 +343,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
                 TextFormField(
                   initialValue: details.jobPosition,
                   onChanged: (val) => vm.updateField(jobPosition: val),
-                  decoration: _inputStyle(hint: 'උදා: පෙදරේරු / කළමනාකරු'),
+                  decoration: _inputStyle(hint: 'උදා: කළමනාකරු / රියදුරු'),
                 ),
                 const SizedBox(height: 12),
                 const Text('ආයතනය / සේවා ස්ථානය (ඇත්නම් පමණක්)', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
@@ -461,11 +501,22 @@ class _IncomeScreenState extends State<IncomeScreen> {
     switch (category) {
       case 'රැකියාව / කුලී වැඩ / ව්‍යාපාර':
         if (details.jobType.isEmpty || details.jobType == 'නැත') return const SizedBox.shrink();
+        
         return Column(
           children: [
             _buildViewRow(' • ස්වභාවය:', details.jobType),
-            if (details.jobPosition.isNotEmpty) _buildViewRow('   - තනතුර / විස්තරය:', details.jobPosition),
-            if (details.jobInstitute.isNotEmpty) _buildViewRow('   - සේවා ස්ථානය:', details.jobInstitute),
+            
+            // කුලී වැඩ නම්
+            if (details.jobType == 'කුලී වැඩ / දෛනික වැටුප්') ...[
+              if (details.laborType.isNotEmpty) _buildViewRow('   - වැඩේ වර්ගය:', details.laborType),
+              if (details.laborType == 'වෙනත්') _buildViewRow('   - විස්තරය:', details.laborOther),
+              if (details.dailyWage.isNotEmpty) _buildViewRow('   - දෛනික ආදායම:', details.dailyWage),
+            ] 
+            // සාමාන්‍ය රැකියා නම්
+            else ...[
+              if (details.jobPosition.isNotEmpty) _buildViewRow('   - තනතුර / විස්තරය:', details.jobPosition),
+              if (details.jobInstitute.isNotEmpty) _buildViewRow('   - සේවා ස්ථානය:', details.jobInstitute),
+            ]
           ],
         );
       case 'කෘෂිකර්මාන්තය':

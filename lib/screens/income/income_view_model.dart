@@ -40,6 +40,9 @@ class IncomeViewModel extends ChangeNotifier {
     String? jobType,
     String? jobPosition,
     String? jobInstitute,
+    String? laborType, // 🟢
+    String? laborOther, // 🟢
+    String? dailyWage, // 🟢
     String? tourismType,
     String? tourismOther,
     String? agricultureType,
@@ -48,7 +51,7 @@ class IncomeViewModel extends ChangeNotifier {
     String? animalHusbandryOther,
     String? animalCount,
     String? fishingType,
-    String? fishingOther, // 🟢
+    String? fishingOther,
     String? otherIncomeDesc,
   }) {
     details = details.copyWith(
@@ -57,6 +60,9 @@ class IncomeViewModel extends ChangeNotifier {
       jobType: jobType,
       jobPosition: jobPosition,
       jobInstitute: jobInstitute,
+      laborType: laborType, // 🟢
+      laborOther: laborOther, // 🟢
+      dailyWage: dailyWage, // 🟢
       tourismType: tourismType,
       tourismOther: tourismOther,
       agricultureType: agricultureType,
@@ -65,7 +71,7 @@ class IncomeViewModel extends ChangeNotifier {
       animalHusbandryOther: animalHusbandryOther,
       animalCount: animalCount,
       fishingType: fishingType,
-      fishingOther: fishingOther, // 🟢
+      fishingOther: fishingOther,
       otherIncomeDesc: otherIncomeDesc,
     );
     notifyListeners();
@@ -87,7 +93,6 @@ class IncomeViewModel extends ChangeNotifier {
       String fType = details.fishingType;
       String oDesc = details.otherIncomeDesc;
 
-      // ප්‍රධාන ආදායමත් නොවන, අමතර ආදායමකුත් නොමැති ඒවා හිස් කිරීම
       if (!hasExtra) {
          if (main != 'රැකියාව / කුලී වැඩ / ව්‍යාපාර') jType = 'නැත';
          if (main != 'සංචාරක කර්මාන්තය') tType = 'නැත';
@@ -97,10 +102,19 @@ class IncomeViewModel extends ChangeNotifier {
          if (main != 'වෙනත්') oDesc = '';
       }
 
+      final isWageLabor = jType == 'කුලී වැඩ / දෛනික වැටුප්';
+      final hasFormalJob = jType != 'නැත' && jType.isNotEmpty && !isWageLabor;
+
       final cleanedDetails = details.copyWith(
         jobType: jType,
-        jobPosition: (jType == 'නැත' || jType.isEmpty) ? '' : details.jobPosition,
-        jobInstitute: (jType == 'නැත' || jType.isEmpty) ? '' : details.jobInstitute,
+        // සාමාන්‍ය රැකියාවක් නම් පමණක් තනතුර/ආයතනය තබාගැනීම
+        jobPosition: hasFormalJob ? details.jobPosition : '',
+        jobInstitute: hasFormalJob ? details.jobInstitute : '',
+        
+        // කුලී වැඩ නම් පමණක් අදාළ දත්ත තබාගැනීම
+        laborType: isWageLabor ? details.laborType : '',
+        laborOther: (isWageLabor && details.laborType == 'වෙනත්') ? details.laborOther : '',
+        dailyWage: isWageLabor ? details.dailyWage : '',
 
         tourismType: tType,
         tourismOther: tType != 'වෙනත්' ? '' : details.tourismOther,
