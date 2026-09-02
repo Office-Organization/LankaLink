@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../../core/app_theme.dart';
 import '../survey_view_model.dart';
 import '../../../models/survey.dart';
-import '../add_member_dialog.dart';
 
 class FamilyStep extends StatefulWidget {
   const FamilyStep({super.key});
@@ -21,7 +20,19 @@ class _FamilyStepState extends State<FamilyStep> {
   final _specialAmountCtrl = TextEditingController();
   final _specialDescCtrl = TextEditingController(); 
   
+  // අස්වැසුම දත්ත සඳහා නව පාලක (Controllers)
+  final _aswasumaAmountCtrl = TextEditingController();
+  String? _aswasumaCategory;
+  
   bool _isEditingSpecialNeeds = false; 
+
+  // අස්වැසුම කාණ්ඩ ලැයිස්තුව
+  final List<String> _aswasumaCategories = [
+    'දුප්පත්',
+    'අන්ත දුප්පත්',
+    'අවදානම් සහගත පවුල්',
+    'සංක්‍රාන්තික පවුල්'
+  ];
 
   @override
   void initState() {
@@ -29,6 +40,9 @@ class _FamilyStepState extends State<FamilyStep> {
     _specialCountCtrl.addListener(_updateSpecialNeeds);
     _specialAmountCtrl.addListener(_updateSpecialNeeds);
     _specialDescCtrl.addListener(_updateSpecialNeeds);
+    
+    // නව අස්වැසුම දත්ත සඳහා Listener
+    _aswasumaAmountCtrl.addListener(_updateAswasumaDetails);
 
     // Automatically fill the search bar with the last searched item
     final currentHouseNumber = context.read<SurveyViewModel>().survey.houseNumber;
@@ -56,13 +70,20 @@ class _FamilyStepState extends State<FamilyStep> {
     context.read<SurveyViewModel>().updateSpecialNeeds(count, amount, descText);
   }
 
+  // අස්වැසුම දත්ත යාවත්කාලීන කිරීම සඳහා (ViewModel එක Update කළ පසු මෙය සක්‍රිය කරන්න)
+  void _updateAswasumaDetails() {
+    if (!mounted) return;
+    // final amountText = _aswasumaAmountCtrl.text.trim();
+    // final amount = amountText.isEmpty ? 0.0 : (double.tryParse(amountText) ?? 0.0);
+    // context.read<SurveyViewModel>().updateAswasumaExtraDetails(_aswasumaCategory, amount); 
+  }
+
   Future<void> _handleSearch([String? query]) async {
     final text = (query ?? _houseNumberCtrl.text).trim();
     if (text.isEmpty) return;
 
     FocusScope.of(context).unfocus();
 
-    // Update the last searched number for subsequent searches
     _lastSearchedHouseNumber = text;
     _houseNumberCtrl.text = text;
     _houseNumberCtrl.selection = TextSelection.fromPosition(
@@ -82,18 +103,16 @@ class _FamilyStepState extends State<FamilyStep> {
     _specialCountCtrl.dispose();
     _specialAmountCtrl.dispose();
     _specialDescCtrl.dispose();
+    _aswasumaAmountCtrl.dispose();
     super.dispose();
   }
 
-  /// Calculates age based on Sri Lankan NIC format.
-  /// Falls back to [defaultAge] if the NIC is empty or invalid.
   int _calculateAgeFromNIC(String nic, int defaultAge) {
     if (nic.trim().isEmpty) return defaultAge;
 
     final currentYear = DateTime.now().year;
     final cleanNic = nic.trim().toUpperCase();
 
-    // Old NIC format (9 digits + V/X)
     if (cleanNic.length == 10 && (cleanNic.endsWith('V') || cleanNic.endsWith('X'))) {
       final yearStr = cleanNic.substring(0, 2);
       final birthYear = int.tryParse(yearStr);
@@ -101,7 +120,6 @@ class _FamilyStepState extends State<FamilyStep> {
         return currentYear - (1900 + birthYear);
       }
     } 
-    // New NIC format (12 digits)
     else if (cleanNic.length == 12) {
       final yearStr = cleanNic.substring(0, 4);
       final birthYear = int.tryParse(yearStr);
@@ -125,7 +143,7 @@ class _FamilyStepState extends State<FamilyStep> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('විශේෂ අවශ්යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
+              const Text('විශේෂ අවශ්‍යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
               IconButton(
                 icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
                 onPressed: () {
@@ -169,7 +187,7 @@ class _FamilyStepState extends State<FamilyStep> {
           if (family.specialNeedDescription.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(
-              'අවශ්යතාවය: ${family.specialNeedDescription}', 
+              'අවශ්‍යතාවය: ${family.specialNeedDescription}', 
               style: const TextStyle(fontSize: 14, color: Colors.black54)
             ),
           ],
@@ -183,7 +201,7 @@ class _FamilyStepState extends State<FamilyStep> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('විශේෂ අවශ්යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text('විශේෂ අවශ්‍යතා සහිත සාමාජිකයන්', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16)),
             if (hasData) 
               IconButton(
                 icon: const Icon(Icons.check, color: Colors.green, size: 20),
@@ -215,7 +233,7 @@ class _FamilyStepState extends State<FamilyStep> {
         TextField(
           controller: _specialDescCtrl,
           decoration: const InputDecoration(
-            labelText: 'විශේෂ අවශ්යතාවය කුමක්ද? (විකල්ප)', 
+            labelText: 'විශේෂ අවශ්‍යතාවය කුමක්ද? (විකල්ප)', 
             hintText: 'උදා: ආබාධිත / නිදන්ගත රෝග',
           ),
         ),
@@ -291,7 +309,7 @@ class _FamilyStepState extends State<FamilyStep> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      'අස්වැසුම ප්රතිලාභ',
+                      'අස්වැසුම ප්‍රතිලාභ',
                       style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
                     ),
                     Row(
@@ -315,6 +333,45 @@ class _FamilyStepState extends State<FamilyStep> {
                     ),
                   ],
                 ),
+                
+                // අස්වැසුම ඇත යන්න තේරූ විට දිස්වන විකල්ප තොරතුරු
+                if (family.hasAswasuma) ...[
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<String>(
+                    value: _aswasumaCategory,
+                    decoration: InputDecoration(
+                      labelText: 'අස්වැසුම කාණ්ඩය (විකල්ප)',
+                      filled: true,
+                      fillColor: AppColors.fieldFill,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    ),
+                    items: _aswasumaCategories.map((String category) {
+                      return DropdownMenuItem<String>(
+                        value: category,
+                        child: Text(category, style: const TextStyle(fontFamily: 'UNGanganee')),
+                      );
+                    }).toList(),
+                    onChanged: (String? newValue) {
+                      setState(() {
+                        _aswasumaCategory = newValue;
+                      });
+                      _updateAswasumaDetails();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _aswasumaAmountCtrl,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText: 'ලබාදෙන මුදල (විකල්ප)',
+                      hintText: 'රු: 0.00',
+                      filled: true,
+                      fillColor: AppColors.fieldFill,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                    ),
+                  ),
+                ],
+
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12.0),
                   child: Divider(),
@@ -376,37 +433,17 @@ class _FamilyStepState extends State<FamilyStep> {
           BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
+      // සාමාජිකයන් සංස්කරණය (Edit/Delete) අක්‍රිය කර ඇත
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: AppColors.primary.withValues(alpha: 0.1),
           child: Icon(
-            member.gender == 'ස්ත්රී' ? Icons.face_3 : Icons.face,
+            member.gender == 'ස්ත්‍රී' ? Icons.face_3 : Icons.face,
             color: AppColors.primary,
           ),
         ),
         title: Text(member.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
         subtitle: Text('වයස: $displayAge | NIC: ${member.nic.isEmpty ? "-" : member.nic}', style: const TextStyle(fontSize: 12)),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
-              onPressed: () async {
-                final updatedMember = await showDialog<FamilyMember>(
-                  context: context,
-                  builder: (_) => AddMemberDialog(existingMember: member),
-                );
-                if (updatedMember != null && context.mounted) {
-                  context.read<SurveyViewModel>().updateMember(updatedMember);
-                }
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-              onPressed: () => context.read<SurveyViewModel>().removeMember(member.id),
-            ),
-          ],
-        ),
       ),
     );
   }

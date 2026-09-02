@@ -57,71 +57,23 @@ class BasicDetailsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addChild(ChildInfo child) {
-    final updatedList = List<ChildInfo>.from(details.children)..add(child);
-    details = details.copyWith(children: updatedList);
+  // අලුත් Member Method එක
+  void addMember(FamilyMember member) {
+    final updatedList = List<FamilyMember>.from(details.members)..add(member);
+    details = details.copyWith(members: updatedList);
     notifyListeners();
   }
 
-  void updateChild(ChildInfo updatedChild) {
-    final updatedList = details.children
-        .map((c) => c.id == updatedChild.id ? updatedChild : c)
-        .toList();
-    details = details.copyWith(children: updatedList);
+  void updateMember(FamilyMember updatedMember) {
+    final updatedList = details.members.map((m) => m.id == updatedMember.id ? updatedMember : m).toList();
+    details = details.copyWith(members: updatedList);
     notifyListeners();
   }
 
-  void removeChild(String id) {
-    final updatedList = details.children.where((c) => c.id != id).toList();
-    details = details.copyWith(children: updatedList);
+  void removeMember(String id) {
+    final updatedList = details.members.where((m) => m.id != id).toList();
+    details = details.copyWith(members: updatedList);
     notifyListeners();
-  }
-
-  void addOtherMember(OtherMemberInfo member) {
-    final updatedList = List<OtherMemberInfo>.from(details.otherMembers)
-      ..add(member);
-    details = details.copyWith(otherMembers: updatedList);
-    notifyListeners();
-  }
-
-  void updateOtherMember(OtherMemberInfo updatedMember) {
-    final updatedList = details.otherMembers
-        .map((m) => m.id == updatedMember.id ? updatedMember : m)
-        .toList();
-    details = details.copyWith(otherMembers: updatedList);
-    notifyListeners();
-  }
-
-  void removeOtherMember(String id) {
-    final updatedList = details.otherMembers
-        .where((m) => m.id != id)
-        .toList();
-    details = details.copyWith(otherMembers: updatedList);
-    notifyListeners();
-  }
-
-  int getAge(String dateOfBirth) {
-    try {
-      final dob = DateTime.parse(dateOfBirth);
-      final now = DateTime.now();
-      int age = now.year - dob.year;
-      if (now.month < dob.month ||
-          (now.month == dob.month && now.day < dob.day)) {
-        age--;
-      }
-      return age;
-    } catch (e, stackTrace) {
-      debugPrint('Error parsing date for age calculation: $e\n$stackTrace');
-      return 0;
-    }
-  }
-
-  bool isChild(String dateOfBirth) {
-    return getAge(dateOfBirth) < 18;
-  }
-
-  String getCategoryLabel(String dateOfBirth) {
-    return isChild(dateOfBirth) ? '(ළමා)' : '(වැඩිහිටි)';
   }
 
   Future<bool> save() async {

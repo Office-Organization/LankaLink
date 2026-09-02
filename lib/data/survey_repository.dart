@@ -1,10 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/survey.dart';
-import '../models/basic_details.dart';
+import '../models/basic_details.dart' as bd; // 🔥 Alias එකක් යොදා ඇත (නම් පැටලීම වැළැක්වීමට)
 import '../models/housing_details.dart';
 import '../models/income_details.dart';
-import '../models/assets_details.dart'; // 🔥 අලුත් Import එක
+import '../models/assets_details.dart';
 
 class SurveyRepository {
   SurveyRepository(this._db);
@@ -71,7 +71,7 @@ class SurveyRepository {
     }
   }
 
-  Future<BasicDetails?> getBasicDetails(String houseNumber) async {
+  Future<bd.BasicDetails?> getBasicDetails(String houseNumber) async {
     try {
       // Check user authentication
       final user = FirebaseAuth.instance.currentUser;
@@ -88,26 +88,27 @@ class SurveyRepository {
           final mapData = Map<String, dynamic>.from(
             data['basicDetails'] as Map,
           );
-          return BasicDetails.fromMap(mapData);
+          return bd.BasicDetails.fromMap(mapData);
         } else {
           final survey = Survey.fromMap(data);
           final adults = survey.family.members.where((m) => m.isAdult).toList();
-          final children = survey.family.members
-              .where((m) => !m.isAdult)
-              .toList();
-              
-          return BasicDetails(
+          
+          // 🔥 පැරණි children සහ ChildInfo ඉවත් කර members ලිස්ට් එක මෙතනින් සකසා ඇත
+          return bd.BasicDetails(
             houseNumber: houseNumber,
             headName: adults.isNotEmpty ? adults.first.name : '',
             nic: adults.isNotEmpty ? adults.first.nic : '',
             headGender: adults.isNotEmpty ? adults.first.gender : 'පුරුෂ',
-            children: children
+            members: survey.family.members
                 .map(
-                  (c) => ChildInfo(
-                    id: c.id,
-                    name: c.name,
-                    gender: c.gender,
-                    dob: "${c.birthday.year}-${c.birthday.month.toString().padLeft(2, '0')}-${c.birthday.day.toString().padLeft(2, '0')}",
+                  (m) => bd.FamilyMember(
+                    id: m.id,
+                    fullName: m.name,
+                    nic: m.nic,
+                    dob: m.birthday.toIso8601String(),
+                    age: m.age,
+                    gender: m.gender,
+                    isAdult: m.isAdult,
                   ),
                 )
                 .toList(),
@@ -129,7 +130,7 @@ class SurveyRepository {
 
   Future<void> saveBasicDetails(
     String houseNumber,
-    BasicDetails details,
+    bd.BasicDetails details,
   ) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
@@ -218,7 +219,6 @@ class SurveyRepository {
     }
   }
 
-  // 🔥 දේපල හා වත්කම් දත්ත ලබාගැනීම/සුරැකීම
   Future<AssetsDetails?> getAssetsDetails(String houseNumber) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');

@@ -9,8 +9,9 @@ class BasicDetails {
   final String nationality;
   final bool hasAntiSocialActivities;
   final String antiSocialDescription;
-  final List<ChildInfo> children;
-  final List<OtherMemberInfo> otherMembers;
+  
+  // වෙනම තිබූ children සහ otherMembers වෙනුවට දැන් ඇත්තේ එකම members ලිස්ට් එකකි.
+  final List<FamilyMember> members;
 
   BasicDetails({
     this.houseNumber = '',
@@ -23,8 +24,7 @@ class BasicDetails {
     this.nationality = 'සිංහල',
     this.hasAntiSocialActivities = false,
     this.antiSocialDescription = '',
-    this.children = const [],
-    this.otherMembers = const [],
+    this.members = const [],
   });
 
   BasicDetails copyWith({
@@ -38,8 +38,7 @@ class BasicDetails {
     String? nationality,
     bool? hasAntiSocialActivities,
     String? antiSocialDescription,
-    List<ChildInfo>? children,
-    List<OtherMemberInfo>? otherMembers,
+    List<FamilyMember>? members,
   }) {
     return BasicDetails(
       houseNumber: houseNumber ?? this.houseNumber,
@@ -54,8 +53,7 @@ class BasicDetails {
           hasAntiSocialActivities ?? this.hasAntiSocialActivities,
       antiSocialDescription:
           antiSocialDescription ?? this.antiSocialDescription,
-      children: children ?? this.children,
-      otherMembers: otherMembers ?? this.otherMembers,
+      members: members ?? this.members,
     );
   }
 
@@ -71,20 +69,14 @@ class BasicDetails {
       'nationality': nationality,
       'hasAntiSocialActivities': hasAntiSocialActivities,
       'antiSocialDescription': antiSocialDescription,
-      'children': children.map((c) => c.toMap()).toList(),
-      'otherMembers': otherMembers.map((m) => m.toMap()).toList(),
+      'members': members.map((m) => m.toMap()).toList(),
     };
   }
 
   factory BasicDetails.fromMap(Map<String, dynamic> map) {
-    var rawChildren = map['children'] as List<dynamic>? ?? [];
-    List<ChildInfo> parsedChildren = rawChildren
-        .map((item) => ChildInfo.fromMap(Map<String, dynamic>.from(item as Map)))
-        .toList();
-
-    var rawOtherMembers = map['otherMembers'] as List<dynamic>? ?? [];
-    List<OtherMemberInfo> parsedOtherMembers = rawOtherMembers
-        .map((item) => OtherMemberInfo.fromMap(Map<String, dynamic>.from(item as Map)))
+    var rawMembers = map['members'] as List<dynamic>? ?? [];
+    List<FamilyMember> parsedMembers = rawMembers
+        .map((item) => FamilyMember.fromMap(Map<String, dynamic>.from(item as Map)))
         .toList();
 
     return BasicDetails(
@@ -98,90 +90,25 @@ class BasicDetails {
       nationality: map['nationality']?.toString() ?? 'සිංහල',
       hasAntiSocialActivities: map['hasAntiSocialActivities'] as bool? ?? false,
       antiSocialDescription: map['antiSocialDescription']?.toString() ?? '',
-      children: parsedChildren,
-      otherMembers: parsedOtherMembers,
+      members: parsedMembers,
     );
   }
 }
 
-class OtherMemberInfo {
+// ළමයින් සහ වැඩිහිටියන් සඳහා වන තනි පොදු මොඩල් එක
+class FamilyMember {
+  // ඔබ ඉල්ලූ පරිදි JSON ආකෘතියට ගැලපෙන Fields
   final String id;
-  final String? name;
-  final String? nic;
-  final String? dateOfBirth;
-  final String? gender;
-  final String? relationship;
-  final bool hasAntiSocialActivities;
-  final String antiSocialDescription;
-
-  OtherMemberInfo({
-    required this.id,
-    this.name,
-    this.nic,
-    this.dateOfBirth,
-    this.gender,
-    this.relationship,
-    this.hasAntiSocialActivities = false,
-    this.antiSocialDescription = '',
-  });
-
-  OtherMemberInfo copyWith({
-    String? id,
-    String? name,
-    String? nic,
-    String? dateOfBirth,
-    String? gender,
-    String? relationship,
-    bool? hasAntiSocialActivities,
-    String? antiSocialDescription,
-  }) {
-    return OtherMemberInfo(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      nic: nic ?? this.nic,
-      dateOfBirth: dateOfBirth ?? this.dateOfBirth,
-      gender: gender ?? this.gender,
-      relationship: relationship ?? this.relationship,
-      hasAntiSocialActivities:
-          hasAntiSocialActivities ?? this.hasAntiSocialActivities,
-      antiSocialDescription:
-          antiSocialDescription ?? this.antiSocialDescription,
-    );
-  }
-
-  factory OtherMemberInfo.fromMap(Map<String, dynamic> map) {
-    return OtherMemberInfo(
-      id: map['id']?.toString() ?? '',
-      name: (map['fullName'] ?? map['name'])?.toString() ?? '',
-      nic: map['nic']?.toString() ?? '',
-      dateOfBirth: (map['dob'] ?? map['dateOfBirth'])?.toString() ?? '',
-      gender: map['gender']?.toString() ?? 'පුරුෂ',
-      relationship: map['relationship']?.toString() ?? 'වෙනත්',
-      hasAntiSocialActivities: map['hasAntiSocialActivities'] as bool? ?? false,
-      antiSocialDescription: map['antiSocialDescription']?.toString() ?? '',
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'fullName': name,
-      'nic': nic,
-      'dob': dateOfBirth,
-      'gender': gender,
-      'relationship': relationship,
-      'hasAntiSocialActivities': hasAntiSocialActivities,
-      'antiSocialDescription': antiSocialDescription,
-    };
-  }
-}
-
-class ChildInfo {
-  final String? id;
-  final String name;
-  final bool attendsSchool;
+  final String fullName;
+  final String nic;
   final String dob;
+  final int age;
   final String gender;
+  final bool isAdult;
+  
+  // අනෙකුත් සමීක්ෂණ දත්ත Fields (පරණ ෆෝම් වල තිබූ)
+  final String relationship;
+  final bool attendsSchool;
   final bool hasSpecialNeeds;
   final bool hasAudioNeed;
   final bool hasVisualNeed;
@@ -192,12 +119,16 @@ class ChildInfo {
   final bool hasAntiSocialActivities;
   final String antiSocialDescription;
 
-  ChildInfo({
-    this.id,
-    required this.name,
-    this.attendsSchool = false,
+  FamilyMember({
+    required this.id,
+    required this.fullName,
+    required this.nic,
     required this.dob,
+    required this.age,
     required this.gender,
+    required this.isAdult,
+    this.relationship = 'වෙනත්',
+    this.attendsSchool = false,
     this.hasSpecialNeeds = false,
     this.hasAudioNeed = false,
     this.hasVisualNeed = false,
@@ -209,12 +140,16 @@ class ChildInfo {
     this.antiSocialDescription = '',
   });
 
-  ChildInfo copyWith({
+  FamilyMember copyWith({
     String? id,
-    String? name,
-    bool? attendsSchool,
+    String? fullName,
+    String? nic,
     String? dob,
+    int? age,
     String? gender,
+    bool? isAdult,
+    String? relationship,
+    bool? attendsSchool,
     bool? hasSpecialNeeds,
     bool? hasAudioNeed,
     bool? hasVisualNeed,
@@ -225,54 +160,39 @@ class ChildInfo {
     bool? hasAntiSocialActivities,
     String? antiSocialDescription,
   }) {
-    return ChildInfo(
+    return FamilyMember(
       id: id ?? this.id,
-      name: name ?? this.name,
-      attendsSchool: attendsSchool ?? this.attendsSchool,
+      fullName: fullName ?? this.fullName,
+      nic: nic ?? this.nic,
       dob: dob ?? this.dob,
+      age: age ?? this.age,
       gender: gender ?? this.gender,
+      isAdult: isAdult ?? this.isAdult,
+      relationship: relationship ?? this.relationship,
+      attendsSchool: attendsSchool ?? this.attendsSchool,
       hasSpecialNeeds: hasSpecialNeeds ?? this.hasSpecialNeeds,
       hasAudioNeed: hasAudioNeed ?? this.hasAudioNeed,
       hasVisualNeed: hasVisualNeed ?? this.hasVisualNeed,
       hasOtherNeed: hasOtherNeed ?? this.hasOtherNeed,
-      receivesGovtAssistance:
-          receivesGovtAssistance ?? this.receivesGovtAssistance,
+      receivesGovtAssistance: receivesGovtAssistance ?? this.receivesGovtAssistance,
       disabilityAllowance: disabilityAllowance ?? this.disabilityAllowance,
-      chronicIllnessAllowance:
-          chronicIllnessAllowance ?? this.chronicIllnessAllowance,
-      hasAntiSocialActivities:
-          hasAntiSocialActivities ?? this.hasAntiSocialActivities,
-      antiSocialDescription:
-          antiSocialDescription ?? this.antiSocialDescription,
+      chronicIllnessAllowance: chronicIllnessAllowance ?? this.chronicIllnessAllowance,
+      hasAntiSocialActivities: hasAntiSocialActivities ?? this.hasAntiSocialActivities,
+      antiSocialDescription: antiSocialDescription ?? this.antiSocialDescription,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'name': name,
-      'attendsSchool': attendsSchool,
-      'dob': dob,
-      'gender': gender,
-      'hasSpecialNeeds': hasSpecialNeeds,
-      'hasAudioNeed': hasAudioNeed,
-      'hasVisualNeed': hasVisualNeed,
-      'hasOtherNeed': hasOtherNeed,
-      'receivesGovtAssistance': receivesGovtAssistance,
-      'disabilityAllowance': disabilityAllowance,
-      'chronicIllnessAllowance': chronicIllnessAllowance,
-      'hasAntiSocialActivities': hasAntiSocialActivities,
-      'antiSocialDescription': antiSocialDescription,
-    };
-  }
-
-  factory ChildInfo.fromMap(Map<String, dynamic> map) {
-    return ChildInfo(
-      id: map['id']?.toString(),
-      name: map['name']?.toString() ?? '',
-      attendsSchool: map['attendsSchool'] as bool? ?? false,
+  factory FamilyMember.fromMap(Map<String, dynamic> map) {
+    return FamilyMember(
+      id: map['id']?.toString() ?? '',
+      fullName: map['fullName']?.toString() ?? '',
+      nic: map['nic']?.toString() ?? '',
       dob: map['dob']?.toString() ?? '',
-      gender: map['gender']?.toString() ?? 'පිරිමි',
+      age: int.tryParse(map['age']?.toString() ?? '0') ?? 0,
+      gender: map['gender']?.toString() ?? 'පුරුෂ',
+      isAdult: map['isAdult'] as bool? ?? true,
+      relationship: map['relationship']?.toString() ?? 'වෙනත්',
+      attendsSchool: map['attendsSchool'] as bool? ?? false,
       hasSpecialNeeds: map['hasSpecialNeeds'] as bool? ?? false,
       hasAudioNeed: map['hasAudioNeed'] as bool? ?? false,
       hasVisualNeed: map['hasVisualNeed'] as bool? ?? false,
@@ -283,5 +203,28 @@ class ChildInfo {
       hasAntiSocialActivities: map['hasAntiSocialActivities'] as bool? ?? false,
       antiSocialDescription: map['antiSocialDescription']?.toString() ?? '',
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'fullName': fullName,
+      'nic': nic,
+      'dob': dob,
+      'age': age,
+      'gender': gender,
+      'isAdult': isAdult,
+      'relationship': relationship,
+      'attendsSchool': attendsSchool,
+      'hasSpecialNeeds': hasSpecialNeeds,
+      'hasAudioNeed': hasAudioNeed,
+      'hasVisualNeed': hasVisualNeed,
+      'hasOtherNeed': hasOtherNeed,
+      'receivesGovtAssistance': receivesGovtAssistance,
+      'disabilityAllowance': disabilityAllowance,
+      'chronicIllnessAllowance': chronicIllnessAllowance,
+      'hasAntiSocialActivities': hasAntiSocialActivities,
+      'antiSocialDescription': antiSocialDescription,
+    };
   }
 }

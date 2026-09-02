@@ -57,29 +57,18 @@ class SurveyViewModel extends ChangeNotifier {
         }
       }
 
-      for (final child in basicDetails.children) {
-        addIfMissing(
-          FamilyMember(
-            id: child.id,
-            name: child.name,
-            nic: '',
-            gender: child.gender,
-            birthday: _parseDate(child.dob) ?? DateTime.now(),
-          ),
-        );
-      }
-
-      for (final member in basicDetails.otherMembers) {
-        final name = member.name?.trim() ?? '';
+      // අලුත් members ලිස්ට් එකෙන් දත්ත ලබා ගැනීම
+      for (final member in basicDetails.members) {
+        final name = member.fullName.trim(); // name වෙනුවට fullName භාවිතා වේ
         if (name.isEmpty) continue;
 
         addIfMissing(
           FamilyMember(
             id: member.id.isEmpty ? null : member.id,
             name: name,
-            nic: member.nic?.trim() ?? '',
-            gender: member.gender ?? '',
-            birthday: _parseDate(member.dateOfBirth) ?? DateTime(1990),
+            nic: member.nic.trim(),
+            gender: member.gender,
+            birthday: _parseDate(member.dob) ?? DateTime.now(), // dateOfBirth වෙනුවට dob 
           ),
         );
       }
@@ -129,34 +118,21 @@ class SurveyViewModel extends ChangeNotifier {
         // Get members from both voters and BasicDetails
         List<FamilyMember> allMembers = [];
 
-        // 1. Fetch from BasicDetails (children and other members added by user)
+        // 1. Fetch from BasicDetails (all members added by user)
         try {
           final basicDetails = await _surveys
               .getBasicDetails(query)
               .timeout(_requestTimeout);
+              
           if (basicDetails != null) {
-            // Add children from BasicDetails
-            for (var child in basicDetails.children) {
-              final dob = _parseDate(child.dob) ?? DateTime.now();
-              allMembers.add(
-                FamilyMember(
-                  id: child.id,
-                  name: child.name,
-                  nic: '',
-                  gender: child.gender == 'ස්ත්‍රී' ? 'ස්ත්‍රී' : 'පුරුෂ',
-                  birthday: dob,
-                ),
-              );
-            }
-
-            // Add other members from BasicDetails
-            for (var member in basicDetails.otherMembers) {
-              final dob = _parseDate(member.dateOfBirth) ?? DateTime(1990);
+            // තනි members ලිස්ට් එකෙන් සියලුම සාමාජිකයින් එකතු කිරීම
+            for (var member in basicDetails.members) {
+              final dob = _parseDate(member.dob) ?? DateTime.now();
               allMembers.add(
                 FamilyMember(
                   id: member.id.isEmpty ? null : member.id,
-                  name: member.name ?? '',
-                  nic: member.nic ?? '',
+                  name: member.fullName,
+                  nic: member.nic,
                   gender: member.gender == 'ස්ත්‍රී' ? 'ස්ත්‍රී' : 'පුරුෂ',
                   birthday: dob,
                 ),
