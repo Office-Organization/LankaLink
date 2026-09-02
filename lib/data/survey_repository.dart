@@ -2,18 +2,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/survey.dart';
-import '../models/basic_details.dart' as bd; // Alias එකක් යොදා ඇත (නම් පැටලීම වැළැක්වීමට)
+import '../models/basic_details.dart' as bd;
 import '../models/housing_details.dart';
 import '../models/income_details.dart';
 import '../models/assets_details.dart';
 
 class SurveyRepository {
   SurveyRepository(this._db);
-  
+
   final FirebaseFirestore _db;
   final String _collection = 'survey_responses';
 
-  // 🟢 UID එක මඟින් users collection එකෙන් නම සෙවීමේ උපකාරක ක්‍රමය (Helper Method)
   Future<String> _getUserName(String? uid) async {
     if (uid == null || uid.isEmpty) return 'පද්ධතිය (System)';
     try {
@@ -27,12 +26,8 @@ class SurveyRepository {
     } catch (e) {
       debugPrint('Error fetching user name: $e');
     }
-    return uid; // නම සොයා ගැනීමට නොහැකි වුවහොත් මුල් UID එකම පෙන්වයි
+    return uid;
   }
-
-  // ==========================================
-  // පවුලේ මූලික තොරතුරු සහ සාමාජිකයන් (Survey)
-  // ==========================================
 
   Future<Survey?> getSurveyByHouseNumber(String houseNumber) async {
     try {
@@ -44,14 +39,14 @@ class SurveyRepository {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
       if (!doc.exists || doc.data() == null) return null;
-      
+
       final data = doc.data()!;
-      
+
       // UID එක නම මඟින් ප්‍රතිස්ථාපනය කිරීම
       if (data.containsKey('updatedBy')) {
         data['updatedBy'] = await _getUserName(data['updatedBy']?.toString());
       }
-      
+
       return Survey.fromMap(data);
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
@@ -69,7 +64,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       DocumentReference ref = _db.collection(_collection).doc(safeHouseNumber);
-      
+
       List<Map<String, dynamic>> membersData = family.members
           .map(
             (m) => {
@@ -112,14 +107,14 @@ class SurveyRepository {
 
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
-      
+
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('basicDetails')) {
           final mapData = Map<String, dynamic>.from(
             data['basicDetails'] as Map,
           );
-          
+
           // BasicDetails සඳහාද UID එක නම මඟින් මාරු කිරීම
           final uid = data['basicDetailsUpdatedBy']?.toString();
           mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
@@ -129,7 +124,7 @@ class SurveyRepository {
         } else {
           final survey = Survey.fromMap(data);
           final adults = survey.family.members.where((m) => m.isAdult).toList();
-          
+
           return bd.BasicDetails(
             houseNumber: houseNumber,
             headName: adults.isNotEmpty ? adults.first.name : '',
@@ -189,15 +184,15 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
-      
+
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('housingDetails')) {
           final mapData = Map<String, dynamic>.from(
             data['housingDetails'] as Map,
           );
-          
-          // 🔥 නිවාස තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම 
+
+          // 🔥 නිවාස තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම
           final uid = data['housingDetailsUpdatedBy']?.toString();
           mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
           mapData['updatedAt'] = data['housingDetailsUpdatedAt'];
@@ -236,7 +231,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
-      
+
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('incomeDetails')) {
@@ -283,7 +278,7 @@ class SurveyRepository {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
-      
+
       if (doc.exists && doc.data() != null) {
         final data = doc.data()!;
         if (data.containsKey('assetsDetails')) {

@@ -11,7 +11,7 @@ abstract final class Routes {
   static const basicDetails = '/basic_details';
   static const housing = '/housing';
   static const income = '/income';
-  // 🔥 අලුත් Routes
+  
   static const assetsMain = '/assets_main';
   static const assetsImmovable = '/assets_immovable';
   static const assetsMovable = '/assets_movable';
