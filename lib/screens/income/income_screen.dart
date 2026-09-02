@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 import '../../core/app_constants.dart';
 import 'income_view_model.dart';
+import '../../models/income_details.dart';
 import '../../widgets/app_button.dart'; 
 
 class IncomeScreen extends StatefulWidget {
@@ -41,9 +42,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         centerTitle: true,
       ),
       body: vm.isBusy
-          ? const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
-            )
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24), 
               child: Column(
@@ -56,17 +55,12 @@ class _IncomeScreenState extends State<IncomeScreen> {
                       decoration: BoxDecoration(
                         color: AppColors.dangerBackground,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: AppColors.danger.withOpacity(0.5),
-                        ),
+                        border: Border.all(color: AppColors.danger.withOpacity(0.5)),
                       ),
                       width: double.infinity,
                       child: Text(
                         vm.error!,
-                        style: const TextStyle(
-                          color: AppColors.danger,
-                          fontFamily: 'UNGanganee',
-                        ),
+                        style: const TextStyle(color: AppColors.danger, fontFamily: 'UNGanganee'),
                       ),
                     ),
 
@@ -75,10 +69,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
                     initialValue: vm.houseNumber,
                     enabled: false,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey, 
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
                     decoration: InputDecoration(
                       filled: true,
                       fillColor: const Color(0xFFF5F5F5), 
@@ -93,7 +84,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
 
                   _buildIncomeSection(details, vm),
 
-                  // 🟢 දත්ත යාවත්කාලීන කළ ලොගය (Update Log)
                   _buildUpdateLog(details.updatedBy, details.updatedAt),
 
                   const SizedBox(height: 40),
@@ -128,9 +118,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  Widget _buildIncomeSection(dynamic details, IncomeViewModel vm) {
-    final hasData = details.mainIncome != null && details.mainIncome.isNotEmpty;
+  Widget _buildIncomeSection(IncomeDetails details, IncomeViewModel vm) {
+    final hasData = details.mainIncome.isNotEmpty;
 
+    // ================= VIEW MODE =================
     if (hasData && !_isEditingIncomeInfo) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -156,30 +147,31 @@ class _IncomeScreenState extends State<IncomeScreen> {
               ],
             ),
             const Divider(),
-            _buildViewRow('ප්‍රධාන ආදායම් මාර්ග:', details.mainIncome),
-            _buildViewRow('අමතර ආදායම් මාර්ග:', details.extraIncome),
-            _buildViewRow('රැකියාව:', details.jobType),
-            if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
-              _buildViewRow('  • තනතුර:', details.jobPosition),
-              _buildViewRow('  • ආයතනය:', details.jobInstitute),
-            ],
-            _buildViewRow('සංචාරක:', details.tourismType),
-            if (details.tourismType == 'වෙනත්')
-              _buildViewRow('  • විස්තරය:', details.tourismOther),
-            _buildViewRow('කෘෂිකාර්මික:', details.agricultureType),
-            if (details.agricultureType == 'වෙනත්')
-              _buildViewRow('  • විස්තරය:', details.agricultureOther),
-            _buildViewRow('සත්ත්ව කර්මාන්තය:', details.animalHusbandryType),
-            if (details.animalHusbandryType == 'වෙනත්')
-              _buildViewRow('  • වර්ගය:', details.animalHusbandryOther),
-            if (details.animalHusbandryType != 'නැත' && details.animalHusbandryType.isNotEmpty)
-              _buildViewRow('  • සතුන් ගණන:', details.animalCount?.toString()),
-            _buildViewRow('ධීවර කර්මාන්තය:', details.fishingType),
+            
+            const Text('ප්‍රධාන ආදායම් මාර්ගය', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 14, color: Colors.blueGrey)),
+            const SizedBox(height: 8),
+            _buildCategoryDataView(details.mainIncome, details),
+            
+            const Divider(height: 30),
+            
+            const Text('අමතර ආදායම් මාර්ග', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 14, color: Colors.blueGrey)),
+            const SizedBox(height: 8),
+            _buildViewRow('අමතර ආදායම් තිබේද:', details.extraIncome),
+            
+            if (details.extraIncome == 'ඇත') ...[
+              if (details.mainIncome != 'රැකියාව / කුලී වැඩ / ව්‍යාපාර') _buildCategoryDataView('රැකියාව / කුලී වැඩ / ව්‍යාපාර', details),
+              if (details.mainIncome != 'කෘෂිකර්මාන්තය') _buildCategoryDataView('කෘෂිකර්මාන්තය', details),
+              if (details.mainIncome != 'සත්ත්ව කර්මාන්තය') _buildCategoryDataView('සත්ත්ව කර්මාන්තය', details),
+              if (details.mainIncome != 'ධීවර කර්මාන්තය') _buildCategoryDataView('ධීවර කර්මාන්තය', details),
+              if (details.mainIncome != 'සංචාරක කර්මාන්තය') _buildCategoryDataView('සංචාරක කර්මාන්තය', details),
+              if (details.mainIncome != 'වෙනත්') _buildCategoryDataView('වෙනත්', details),
+            ]
           ],
         ),
       );
     }
 
+    // ================= EDIT MODE =================
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -199,58 +191,122 @@ class _IncomeScreenState extends State<IncomeScreen> {
         ),
         const SizedBox(height: 16),
 
-        _buildLabel('ප්‍රධාන ආදායම් මාර්ග'),
+        _buildLabel('ප්‍රධාන ආදායම් මාර්ගය කුමක්ද?'),
         _buildDropdown(
           value: details.mainIncome,
-          hintText: 'ප්‍රධාන ආදායමක් තිබේද?',
-          items: ['ඇත', 'නැත'],
+          hintText: 'ප්‍රධාන ආදායම තෝරන්න',
+          items: [
+            'රැකියාව / කුලී වැඩ / ව්‍යාපාර', 
+            'කෘෂිකර්මාන්තය', 
+            'සත්ත්ව කර්මාන්තය', 
+            'ධීවර කර්මාන්තය', 
+            'සංචාරක කර්මාන්තය', 
+            'වෙනත්'
+          ],
           onChanged: (val) => vm.updateField(mainIncome: val),
         ),
-        const SizedBox(height: 16),
+        
+        if (details.mainIncome.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          _buildCategoryForm(details.mainIncome, details, vm, isMain: true),
+          const SizedBox(height: 24),
+          const Divider(thickness: 1.5),
+          const SizedBox(height: 16),
+        ],
 
-        _buildLabel('අමතර ආදායම් මාර්ග'),
+        _buildLabel('අමතර ආදායම් මාර්ග තිබේද?'),
         _buildDropdown(
           value: details.extraIncome,
-          hintText: 'අමතර ආදායමක් තිබේද?',
+          hintText: 'තෝරන්න',
           items: ['ඇත', 'නැත'],
           onChanged: (val) => vm.updateField(extraIncome: val),
         ),
-        const SizedBox(height: 16),
-
-        _buildLabel('රැකියාව'),
-        _buildDropdown(
-          value: details.jobType,
-          hintText: 'රැකියාවේ වර්ගය තෝරන්න',
-          items: [
-            'රජයේ',
-            'පුද්ගලික අංශයේ',
-            'අර්ධ රාජ්‍ය',
-            'විදෙස්',
-            'නැත',
-          ],
-          onChanged: (val) => vm.updateField(jobType: val),
-        ),
-
-        if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
-          const SizedBox(height: 12),
+        
+        if (details.extraIncome == 'ඇත') ...[
+          const SizedBox(height: 16),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.fieldFill,
+              color: AppColors.white,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.borderColor, width: 1.5),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('තනතුර', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
+                const Text(
+                  'අමතර ආදායම් මාර්ග විස්තර (අදාළ ඒවා පමණක් පුරවන්න)',
+                  style: TextStyle(fontFamily: 'UNSamantha', fontSize: 14, color: Colors.blueGrey, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 20),
+                
+                if (details.mainIncome != 'රැකියාව / කුලී වැඩ / ව්‍යාපාර') _buildCategoryForm('රැකියාව / කුලී වැඩ / ව්‍යාපාර', details, vm, isMain: false),
+                if (details.mainIncome != 'කෘෂිකර්මාන්තය') _buildCategoryForm('කෘෂිකර්මාන්තය', details, vm, isMain: false),
+                if (details.mainIncome != 'සත්ත්ව කර්මාන්තය') _buildCategoryForm('සත්ත්ව කර්මාන්තය', details, vm, isMain: false),
+                if (details.mainIncome != 'ධීවර කර්මාන්තය') _buildCategoryForm('ධීවර කර්මාන්තය', details, vm, isMain: false),
+                if (details.mainIncome != 'සංචාරක කර්මාන්තය') _buildCategoryForm('සංචාරක කර්මාන්තය', details, vm, isMain: false),
+                if (details.mainIncome != 'වෙනත්') _buildCategoryForm('වෙනත්', details, vm, isMain: false),
+              ],
+            ),
+          )
+        ],
+      ],
+    );
+  }
+
+  // ================= HELPER METHODS (FORMS) =================
+
+  Widget _buildCategoryForm(String category, IncomeDetails details, IncomeViewModel vm, {required bool isMain}) {
+    switch (category) {
+      case 'රැකියාව / කුලී වැඩ / ව්‍යාපාර': return _buildJobForm(details, vm, isMain);
+      case 'කෘෂිකර්මාන්තය': return _buildAgriForm(details, vm, isMain);
+      case 'සත්ත්ව කර්මාන්තය': return _buildAnimalForm(details, vm, isMain);
+      case 'ධීවර කර්මාන්තය': return _buildFishingForm(details, vm, isMain);
+      case 'සංචාරක කර්මාන්තය': return _buildTourismForm(details, vm, isMain);
+      case 'වෙනත්': return _buildOtherForm(details, vm, isMain);
+      default: return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildJobForm(IncomeDetails details, IncomeViewModel vm, bool isMain) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(isMain ? 'ස්වභාවය තෝරන්න' : 'රැකියාවක්/කුලී වැඩක් කරන්නේද?'),
+        _buildDropdown(
+          value: details.jobType,
+          hintText: 'තෝරන්න',
+          items: [
+            'රජයේ', 
+            'අර්ධ රාජ්‍ය', 
+            'පුද්ගලික අංශයේ', 
+            'කුලී වැඩ / දෛනික වැටුප්', 
+            'ස්වයං රැකියා', 
+            'ව්‍යාපාර / වෙළඳාම්', 
+            'විදෙස් රැකියා', 
+            'විශ්‍රාම වැටුප්', 
+            'වෙනත්', 
+            'නැත'
+          ],
+          onChanged: (val) => vm.updateField(jobType: val),
+        ),
+        if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.fieldFill, borderRadius: BorderRadius.circular(12)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('තනතුර / විස්තරය', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextFormField(
                   initialValue: details.jobPosition,
                   onChanged: (val) => vm.updateField(jobPosition: val),
-                  decoration: _inputStyle(),
+                  decoration: _inputStyle(hint: 'උදා: පෙදරේරු / කළමනාකරු'),
                 ),
                 const SizedBox(height: 12),
-                const Text('ආයතනය', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
+                const Text('ආයතනය / සේවා ස්ථානය (ඇත්නම් පමණක්)', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextFormField(
                   initialValue: details.jobInstitute,
@@ -261,30 +317,31 @@ class _IncomeScreenState extends State<IncomeScreen> {
             ),
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
 
-        _buildLabel('සංචාරක'),
-        _buildDropdown(
-          value: details.tourismType,
-          hintText: 'සංචාරක කර්මාන්තයේ නියැලෙන්නේද?',
-          items: ['සේවා සැපයීම', 'පහසුකම් සැපයීම', 'වෙනත්', 'නැත'],
-          onChanged: (val) => vm.updateField(tourismType: val),
-        ),
-        if (details.tourismType == 'වෙනත්') ...[
-          const SizedBox(height: 8),
-          TextFormField(
-            initialValue: details.tourismOther,
-            onChanged: (val) => vm.updateField(tourismOther: val),
-            decoration: _inputStyle(hint: 'විස්තරය ඇතුළත් කරන්න'),
-          ),
-        ],
-        const SizedBox(height: 16),
-
-        _buildLabel('කෘෂිකාර්මික'),
+  Widget _buildAgriForm(IncomeDetails details, IncomeViewModel vm, bool isMain) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(isMain ? 'කෘෂිකාර්මික වර්ගය' : 'කෘෂිකාර්මික කටයුතු කරන්නේද?'),
         _buildDropdown(
           value: details.agricultureType,
-          hintText: 'කෘෂිකාර්මික කටයුතු',
-          items: ['තේ', 'වී', 'රබර්', 'පොල්', 'වෙනත්', 'නැත'],
+          hintText: 'තෝරන්න',
+          items: [
+            'වී වගාව (තමන්ගේ ඉඩමේ)', 
+            'අඳ ගොවිතැන (හවුල් වගාව)', 
+            'තේ', 
+            'රබර්', 
+            'පොල්', 
+            'එළවළු / පලතුරු වගාව', 
+            'සුළු අපනයන බෝග (කුරුඳු ආදිය)', 
+            'හේන් ගොවිතැන', 
+            'වෙනත්', 
+            'නැත'
+          ],
           onChanged: (val) => vm.updateField(agricultureType: val),
         ),
         if (details.agricultureType == 'වෙනත්') ...[
@@ -295,13 +352,20 @@ class _IncomeScreenState extends State<IncomeScreen> {
             decoration: _inputStyle(hint: 'විස්තරය ඇතුළත් කරන්න'),
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
 
-        _buildLabel('සත්ත්ව කර්මාන්තය'),
+  Widget _buildAnimalForm(IncomeDetails details, IncomeViewModel vm, bool isMain) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(isMain ? 'සත්ත්ව කර්මාන්තය' : 'සත්ත්ව කර්මාන්තයේ නියැලෙන්නේද?'),
         _buildDropdown(
           value: details.animalHusbandryType,
-          hintText: 'සත්ත්ව කර්මාන්තය',
-          items: ['ඌරන්', 'කුකුළන්', 'හරකුන්', 'එළුවන්', 'වෙනත්', 'නැත'],
+          hintText: 'තෝරන්න',
+          items: ['කිරි ගව පාලනය', 'කුකුළු පාලනය', 'ඌරු පාලනය', 'එළු පාලනය', 'මී මැසි පාලනය', 'වෙනත්', 'නැත'],
           onChanged: (val) => vm.updateField(animalHusbandryType: val),
         ),
         if (details.animalHusbandryType == 'වෙනත්') ...[
@@ -314,7 +378,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         ],
         if (details.animalHusbandryType != 'නැත' && details.animalHusbandryType.isNotEmpty) ...[
           const SizedBox(height: 12),
-          const Text('සතුන් ගණන', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
+          const Text('සතුන් ගණන (ආසන්න වශයෙන්)', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           TextFormField(
             initialValue: details.animalCount?.toString(),
@@ -323,17 +387,126 @@ class _IncomeScreenState extends State<IncomeScreen> {
             decoration: _inputStyle(),
           ),
         ],
-        const SizedBox(height: 16),
-
-        _buildLabel('ධීවර කර්මාන්තය'),
-        _buildDropdown(
-          value: details.fishingType,
-          hintText: 'ධීවර කර්මාන්තය',
-          items: ['කරදිය', 'මිරිදිය', 'සුරතල් මසුන්', 'නැත'],
-          onChanged: (val) => vm.updateField(fishingType: val),
-        ),
+        const SizedBox(height: 20),
       ],
     );
+  }
+
+  Widget _buildFishingForm(IncomeDetails details, IncomeViewModel vm, bool isMain) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(isMain ? 'ධීවර කර්මාන්තයේ වර්ගය' : 'ධීවර කර්මාන්තයේ නියැලෙන්නේද?'),
+        _buildDropdown(
+          value: details.fishingType,
+          hintText: 'තෝරන්න',
+          items: ['මුහුදු ධීවර කර්මාන්තය', 'මිරිදිය ධීවර කර්මාන්තය', 'විසිතුරු මසුන් ඇති කිරීම', 'කරවල / මාළු අලෙවිය', 'වෙනත්', 'නැත'],
+          onChanged: (val) => vm.updateField(fishingType: val),
+        ),
+        if (details.fishingType == 'වෙනත්') ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: details.fishingOther,
+            onChanged: (val) => vm.updateField(fishingOther: val),
+            decoration: _inputStyle(hint: 'විස්තරය ඇතුළත් කරන්න'),
+          ),
+        ],
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildTourismForm(IncomeDetails details, IncomeViewModel vm, bool isMain) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(isMain ? 'සංචාරක කර්මාන්තය' : 'සංචාරක කර්මාන්තයේ නියැලෙන්නේද?'),
+        _buildDropdown(
+          value: details.tourismType,
+          hintText: 'තෝරන්න',
+          items: ['හෝටල් / නවාතැන් සැපයීම', 'ප්‍රවාහන සේවා (සෆාරි, ටුක්ටුක්)', 'මඟ පෙන්වන්නන් (Tour Guide)', 'සංචාරක භාණ්ඩ අලෙවිය', 'වෙනත්', 'නැත'],
+          onChanged: (val) => vm.updateField(tourismType: val),
+        ),
+        if (details.tourismType == 'වෙනත්') ...[
+          const SizedBox(height: 8),
+          TextFormField(
+            initialValue: details.tourismOther,
+            onChanged: (val) => vm.updateField(tourismOther: val),
+            decoration: _inputStyle(hint: 'විස්තරය ඇතුළත් කරන්න'),
+          ),
+        ],
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildOtherForm(IncomeDetails details, IncomeViewModel vm, bool isMain) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel(isMain ? 'වෙනත් ආදායම් මාර්ග විස්තරය' : 'වෙනත් ආදායම් තිබේද? (විස්තරය)'),
+        TextFormField(
+          initialValue: details.otherIncomeDesc,
+          onChanged: (val) => vm.updateField(otherIncomeDesc: val),
+          decoration: _inputStyle(hint: 'උදා: කුලී නිවාස / ආධාර මුදල්'),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  // ================= VIEW MODE HELPERS =================
+
+  Widget _buildCategoryDataView(String category, IncomeDetails details) {
+    switch (category) {
+      case 'රැකියාව / කුලී වැඩ / ව්‍යාපාර':
+        if (details.jobType.isEmpty || details.jobType == 'නැත') return const SizedBox.shrink();
+        return Column(
+          children: [
+            _buildViewRow(' • ස්වභාවය:', details.jobType),
+            if (details.jobPosition.isNotEmpty) _buildViewRow('   - තනතුර / විස්තරය:', details.jobPosition),
+            if (details.jobInstitute.isNotEmpty) _buildViewRow('   - සේවා ස්ථානය:', details.jobInstitute),
+          ],
+        );
+      case 'කෘෂිකර්මාන්තය':
+        if (details.agricultureType.isEmpty || details.agricultureType == 'නැත') return const SizedBox.shrink();
+        return Column(
+          children: [
+            _buildViewRow(' • කෘෂිකාර්මික:', details.agricultureType),
+            if (details.agricultureType == 'වෙනත්') _buildViewRow('   - විස්තරය:', details.agricultureOther),
+          ],
+        );
+      case 'සත්ත්ව කර්මාන්තය':
+        if (details.animalHusbandryType.isEmpty || details.animalHusbandryType == 'නැත') return const SizedBox.shrink();
+        return Column(
+          children: [
+            _buildViewRow(' • සත්ත්ව කර්මාන්තය:', details.animalHusbandryType),
+            if (details.animalHusbandryType == 'වෙනත්') _buildViewRow('   - වර්ගය:', details.animalHusbandryOther),
+            if (details.animalCount.isNotEmpty) _buildViewRow('   - සතුන් ගණන:', details.animalCount),
+          ],
+        );
+      case 'ධීවර කර්මාන්තය':
+        if (details.fishingType.isEmpty || details.fishingType == 'නැත') return const SizedBox.shrink();
+        return Column(
+          children: [
+             _buildViewRow(' • ධීවර කර්මාන්තය:', details.fishingType),
+             if (details.fishingType == 'වෙනත්') _buildViewRow('   - විස්තරය:', details.fishingOther),
+          ],
+        );
+      case 'සංචාරක කර්මාන්තය':
+        if (details.tourismType.isEmpty || details.tourismType == 'නැත') return const SizedBox.shrink();
+        return Column(
+          children: [
+            _buildViewRow(' • සංචාරක:', details.tourismType),
+            if (details.tourismType == 'වෙනත්') _buildViewRow('   - විස්තරය:', details.tourismOther),
+          ],
+        );
+      case 'වෙනත්':
+        if (details.otherIncomeDesc.isEmpty) return const SizedBox.shrink();
+        return _buildViewRow(' • වෙනත් ආදායම්:', details.otherIncomeDesc);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 
   Widget _buildViewRow(String label, String? value) {
@@ -345,10 +518,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
         children: [
           SizedBox(
             width: 140,
-            child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+            child: Text(label, style: const TextStyle(color: Colors.black87, fontSize: 13, fontFamily: 'UNGanganee')),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'UNGanganee')),
           ),
         ],
       ),
@@ -387,7 +560,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  // 🟢 හිස් (Empty) Dropdown එකක් පෙන්වීම සඳහා සකසන ලද Dropdown Widget එක
   Widget _buildDropdown({
     required String? value,
     required List<String> items,
@@ -423,7 +595,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  // 🟢 ලොගය පෙන්වන Widget එක 
   Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
     if (updatedBy == null && updatedAt == null) {
       return Container(

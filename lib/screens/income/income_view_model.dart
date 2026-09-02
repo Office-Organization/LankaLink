@@ -20,9 +20,7 @@ class IncomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final IncomeDetails? fetchedDetails = await _repository.getIncomeDetails(
-        houseNumber,
-      );
+      final IncomeDetails? fetchedDetails = await _repository.getIncomeDetails(houseNumber);
       if (fetchedDetails != null) {
         details = fetchedDetails;
       }
@@ -50,6 +48,8 @@ class IncomeViewModel extends ChangeNotifier {
     String? animalHusbandryOther,
     String? animalCount,
     String? fishingType,
+    String? fishingOther, // 🟢
+    String? otherIncomeDesc,
   }) {
     details = details.copyWith(
       mainIncome: mainIncome,
@@ -65,6 +65,8 @@ class IncomeViewModel extends ChangeNotifier {
       animalHusbandryOther: animalHusbandryOther,
       animalCount: animalCount,
       fishingType: fishingType,
+      fishingOther: fishingOther, // 🟢
+      otherIncomeDesc: otherIncomeDesc,
     );
     notifyListeners();
   }
@@ -75,22 +77,45 @@ class IncomeViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Clean up fields if user changed main dropdown to 'නැත' or removed 'වෙනත්'
+      final main = details.mainIncome;
+      final hasExtra = details.extraIncome == 'ඇත';
+
+      String jType = details.jobType;
+      String tType = details.tourismType;
+      String aType = details.agricultureType;
+      String anType = details.animalHusbandryType;
+      String fType = details.fishingType;
+      String oDesc = details.otherIncomeDesc;
+
+      // ප්‍රධාන ආදායමත් නොවන, අමතර ආදායමකුත් නොමැති ඒවා හිස් කිරීම
+      if (!hasExtra) {
+         if (main != 'රැකියාව / කුලී වැඩ / ව්‍යාපාර') jType = 'නැත';
+         if (main != 'සංචාරක කර්මාන්තය') tType = 'නැත';
+         if (main != 'කෘෂිකර්මාන්තය') aType = 'නැත';
+         if (main != 'සත්ත්ව කර්මාන්තය') anType = 'නැත';
+         if (main != 'ධීවර කර්මාන්තය') fType = 'නැත';
+         if (main != 'වෙනත්') oDesc = '';
+      }
+
       final cleanedDetails = details.copyWith(
-        jobPosition: details.jobType == 'නැත' ? '' : details.jobPosition,
-        jobInstitute: details.jobType == 'නැත' ? '' : details.jobInstitute,
-        tourismOther: details.tourismType != 'වෙනත්'
-            ? ''
-            : details.tourismOther,
-        agricultureOther: details.agricultureType != 'වෙනත්'
-            ? ''
-            : details.agricultureOther,
-        animalHusbandryOther: details.animalHusbandryType != 'වෙනත්'
-            ? ''
-            : details.animalHusbandryOther,
-        animalCount: details.animalHusbandryType == 'නැත'
-            ? ''
-            : details.animalCount,
+        jobType: jType,
+        jobPosition: (jType == 'නැත' || jType.isEmpty) ? '' : details.jobPosition,
+        jobInstitute: (jType == 'නැත' || jType.isEmpty) ? '' : details.jobInstitute,
+
+        tourismType: tType,
+        tourismOther: tType != 'වෙනත්' ? '' : details.tourismOther,
+
+        agricultureType: aType,
+        agricultureOther: aType != 'වෙනත්' ? '' : details.agricultureOther,
+
+        animalHusbandryType: anType,
+        animalHusbandryOther: anType != 'වෙනත්' ? '' : details.animalHusbandryOther,
+        animalCount: (anType == 'නැත' || anType.isEmpty) ? '' : details.animalCount,
+
+        fishingType: fType,
+        fishingOther: fType != 'වෙනත්' ? '' : details.fishingOther,
+
+        otherIncomeDesc: oDesc,
       );
 
       await _repository.saveIncomeDetails(houseNumber, cleanedDetails);

@@ -20,8 +20,9 @@ class IncomeDetails {
   final String animalCount;
   
   final String fishingType;
+  final String fishingOther; // 🟢 අලුතින් එකතු කළ කොටස
+  final String otherIncomeDesc;
 
-  // 🟢 ලොග් විස්තර (Log details)
   final String? updatedBy;
   final DateTime? updatedAt;
 
@@ -40,6 +41,8 @@ class IncomeDetails {
     this.animalHusbandryOther = '',
     this.animalCount = '',
     this.fishingType = '',
+    this.fishingOther = '', // 🟢
+    this.otherIncomeDesc = '',
     this.updatedBy,
     this.updatedAt,
   });
@@ -59,6 +62,8 @@ class IncomeDetails {
     String? animalHusbandryOther,
     String? animalCount,
     String? fishingType,
+    String? fishingOther, // 🟢
+    String? otherIncomeDesc,
     String? updatedBy,
     DateTime? updatedAt,
   }) {
@@ -77,6 +82,8 @@ class IncomeDetails {
       animalHusbandryOther: animalHusbandryOther ?? this.animalHusbandryOther,
       animalCount: animalCount ?? this.animalCount,
       fishingType: fishingType ?? this.fishingType,
+      fishingOther: fishingOther ?? this.fishingOther, // 🟢
+      otherIncomeDesc: otherIncomeDesc ?? this.otherIncomeDesc,
       updatedBy: updatedBy ?? this.updatedBy,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -97,6 +104,8 @@ class IncomeDetails {
     'animalHusbandryOther': animalHusbandryOther,
     'animalCount': animalCount,
     'fishingType': fishingType,
+    'fishingOther': fishingOther, // 🟢
+    'otherIncomeDesc': otherIncomeDesc,
     'updatedBy': updatedBy,
     'updatedAt': updatedAt?.toIso8601String(),
   };
@@ -129,6 +138,8 @@ class IncomeDetails {
       animalHusbandryOther: map['animalHusbandryOther']?.toString() ?? '',
       animalCount: map['animalCount']?.toString() ?? '',
       fishingType: map['fishingType']?.toString() ?? '',
+      fishingOther: map['fishingOther']?.toString() ?? '', // 🟢
+      otherIncomeDesc: map['otherIncomeDesc']?.toString() ?? '',
       updatedBy: map['updatedBy']?.toString(),
       updatedAt: parsedDate,
     );
