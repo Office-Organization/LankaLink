@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import '../models/survey.dart';
-import '../models/basic_details.dart' as bd; // 🔥 Alias එකක් යොදා ඇත (නම් පැටලීම වැළැක්වීමට)
+import '../models/basic_details.dart' as bd; // Alias එකක් යොදා ඇත (නම් පැටලීම වැළැක්වීමට)
 import '../models/housing_details.dart';
 import '../models/income_details.dart';
 import '../models/assets_details.dart';
@@ -12,9 +13,29 @@ class SurveyRepository {
   final FirebaseFirestore _db;
   final String _collection = 'survey_responses';
 
+  // 🟢 UID එක මඟින් users collection එකෙන් නම සෙවීමේ උපකාරක ක්‍රමය (Helper Method)
+  Future<String> _getUserName(String? uid) async {
+    if (uid == null || uid.isEmpty) return 'පද්ධතිය (System)';
+    try {
+      final doc = await _db.collection('users').doc(uid).get();
+      if (doc.exists && doc.data() != null) {
+        final name = doc.data()!['name'] as String?;
+        if (name != null && name.isNotEmpty) {
+          return name;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching user name: $e');
+    }
+    return uid; // නම සොයා ගැනීමට නොහැකි වුවහොත් මුල් UID එකම පෙන්වයි
+  }
+
+  // ==========================================
+  // පවුලේ මූලික තොරතුරු සහ සාමාජිකයන් (Survey)
+  // ==========================================
+
   Future<Survey?> getSurveyByHouseNumber(String houseNumber) async {
     try {
-      // Check user authentication
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('Auth Error: Please sign in to access survey data.');
@@ -24,7 +45,14 @@ class SurveyRepository {
       final doc = await _db.collection(_collection).doc(safeHouseNumber).get();
       if (!doc.exists || doc.data() == null) return null;
       
-      return Survey.fromMap(doc.data()!);
+      final data = doc.data()!;
+      
+      // UID එක නම මඟින් ප්‍රතිස්ථාපනය කිරීම
+      if (data.containsKey('updatedBy')) {
+        data['updatedBy'] = await _getUserName(data['updatedBy']?.toString());
+      }
+      
+      return Survey.fromMap(data);
     } on FirebaseException catch (e) {
       if (e.code == 'permission-denied') {
         throw Exception(
@@ -71,9 +99,12 @@ class SurveyRepository {
     }
   }
 
+  // ==========================================
+  // Basic Details (පවුලේ මූලික තොරතුරු සහ සාමාජිකයන්)
+  // ==========================================
+
   Future<bd.BasicDetails?> getBasicDetails(String houseNumber) async {
     try {
-      // Check user authentication
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
         throw Exception('Auth Error: Please sign in to access family data.');
@@ -88,12 +119,17 @@ class SurveyRepository {
           final mapData = Map<String, dynamic>.from(
             data['basicDetails'] as Map,
           );
+          
+          // BasicDetails සඳහාද UID එක නම මඟින් මාරු කිරීම
+          final uid = data['basicDetailsUpdatedBy']?.toString();
+          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
+          mapData['updatedAt'] = data['basicDetailsUpdatedAt'];
+
           return bd.BasicDetails.fromMap(mapData);
         } else {
           final survey = Survey.fromMap(data);
           final adults = survey.family.members.where((m) => m.isAdult).toList();
           
-          // 🔥 පැරණි children සහ ChildInfo ඉවත් කර members ලිස්ට් එක මෙතනින් සකසා ඇත
           return bd.BasicDetails(
             houseNumber: houseNumber,
             headName: adults.isNotEmpty ? adults.first.name : '',
@@ -145,6 +181,10 @@ class SurveyRepository {
     }
   }
 
+  // ==========================================
+  // Housing Details (නිවාස තොරතුරු)
+  // ==========================================
+
   Future<HousingDetails?> getHousingDetails(String houseNumber) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
@@ -156,6 +196,12 @@ class SurveyRepository {
           final mapData = Map<String, dynamic>.from(
             data['housingDetails'] as Map,
           );
+          
+          // 🔥 නිවාස තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම 
+          final uid = data['housingDetailsUpdatedBy']?.toString();
+          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
+          mapData['updatedAt'] = data['housingDetailsUpdatedAt'];
+
           return HousingDetails.fromMap(mapData);
         }
       }
@@ -182,6 +228,10 @@ class SurveyRepository {
     }
   }
 
+  // ==========================================
+  // Income Details (ආදායම් තොරතුරු)
+  // ==========================================
+
   Future<IncomeDetails?> getIncomeDetails(String houseNumber) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
@@ -193,6 +243,12 @@ class SurveyRepository {
           final mapData = Map<String, dynamic>.from(
             data['incomeDetails'] as Map,
           );
+
+          // 🔥 ආදායම් තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම
+          final uid = data['incomeDetailsUpdatedBy']?.toString();
+          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
+          mapData['updatedAt'] = data['incomeDetailsUpdatedAt'];
+
           return IncomeDetails.fromMap(mapData);
         }
       }
@@ -219,6 +275,10 @@ class SurveyRepository {
     }
   }
 
+  // ==========================================
+  // Assets Details (වත්කම් තොරතුරු)
+  // ==========================================
+
   Future<AssetsDetails?> getAssetsDetails(String houseNumber) async {
     try {
       String safeHouseNumber = houseNumber.replaceAll('/', '-');
@@ -230,6 +290,12 @@ class SurveyRepository {
           final mapData = Map<String, dynamic>.from(
             data['assetsDetails'] as Map,
           );
+
+          // 🔥 වත්කම් තොරතුරු සඳහා Update ලොගයේ දත්ත ලබා ගැනීම
+          final uid = data['assetsDetailsUpdatedBy']?.toString();
+          mapData['updatedBy'] = uid != null ? await _getUserName(uid) : null;
+          mapData['updatedAt'] = data['assetsDetailsUpdatedAt'];
+
           return AssetsDetails.fromMap(mapData);
         }
       }

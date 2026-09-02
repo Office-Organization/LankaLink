@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class IncomeDetails {
   final String houseNumber;
   final String mainIncome;
@@ -19,21 +21,28 @@ class IncomeDetails {
   
   final String fishingType;
 
+  // 🟢 අලුතින් එකතු කළ ලොග් විස්තර (Log details)
+  final String? updatedBy;
+  final DateTime? updatedAt;
+
   IncomeDetails({
     this.houseNumber = '',
-    this.mainIncome = 'ඇත',
-    this.extraIncome = 'නැත',
-    this.jobType = 'නැත',
+    // 🟢 සියලුම Default අගයන් හිස් (Empty) කර ඇත
+    this.mainIncome = '',
+    this.extraIncome = '',
+    this.jobType = '',
     this.jobPosition = '',
     this.jobInstitute = '',
-    this.tourismType = 'නැත',
+    this.tourismType = '',
     this.tourismOther = '',
-    this.agricultureType = 'නැත',
+    this.agricultureType = '',
     this.agricultureOther = '',
-    this.animalHusbandryType = 'නැත',
+    this.animalHusbandryType = '',
     this.animalHusbandryOther = '',
     this.animalCount = '',
-    this.fishingType = 'නැත',
+    this.fishingType = '',
+    this.updatedBy, // 🟢
+    this.updatedAt, // 🟢
   });
 
   IncomeDetails copyWith({
@@ -51,6 +60,8 @@ class IncomeDetails {
     String? animalHusbandryOther,
     String? animalCount,
     String? fishingType,
+    String? updatedBy,    // 🟢
+    DateTime? updatedAt,  // 🟢
   }) {
     return IncomeDetails(
       houseNumber: houseNumber ?? this.houseNumber,
@@ -67,6 +78,8 @@ class IncomeDetails {
       animalHusbandryOther: animalHusbandryOther ?? this.animalHusbandryOther,
       animalCount: animalCount ?? this.animalCount,
       fishingType: fishingType ?? this.fishingType,
+      updatedBy: updatedBy ?? this.updatedBy, // 🟢
+      updatedAt: updatedAt ?? this.updatedAt, // 🟢
     );
   }
 
@@ -85,24 +98,41 @@ class IncomeDetails {
     'animalHusbandryOther': animalHusbandryOther,
     'animalCount': animalCount,
     'fishingType': fishingType,
+    'updatedBy': updatedBy,
+    'updatedAt': updatedAt?.toIso8601String(),
   };
 
   factory IncomeDetails.fromMap(Map<String, dynamic> map) {
+    // 🟢 Timestamp සහ DateTime නිවැරදිව හසුරුවන කොටස
+    DateTime? parsedDate;
+    if (map['updatedAt'] != null) {
+      final t = map['updatedAt'];
+      if (t is Timestamp) { 
+        parsedDate = t.toDate();
+      } else if (t is DateTime) {
+        parsedDate = t;
+      } else {
+        parsedDate = DateTime.tryParse(t.toString());
+      }
+    }
+
     return IncomeDetails(
       houseNumber: map['houseNumber']?.toString() ?? '',
-      mainIncome: map['mainIncome']?.toString() ?? 'ඇත',
-      extraIncome: map['extraIncome']?.toString() ?? 'නැත',
-      jobType: map['jobType']?.toString() ?? 'නැත',
+      mainIncome: map['mainIncome']?.toString() ?? '',
+      extraIncome: map['extraIncome']?.toString() ?? '',
+      jobType: map['jobType']?.toString() ?? '',
       jobPosition: map['jobPosition']?.toString() ?? '',
       jobInstitute: map['jobInstitute']?.toString() ?? '',
-      tourismType: map['tourismType']?.toString() ?? 'නැත',
+      tourismType: map['tourismType']?.toString() ?? '',
       tourismOther: map['tourismOther']?.toString() ?? '',
-      agricultureType: map['agricultureType']?.toString() ?? 'නැත',
+      agricultureType: map['agricultureType']?.toString() ?? '',
       agricultureOther: map['agricultureOther']?.toString() ?? '',
-      animalHusbandryType: map['animalHusbandryType']?.toString() ?? 'නැත',
+      animalHusbandryType: map['animalHusbandryType']?.toString() ?? '',
       animalHusbandryOther: map['animalHusbandryOther']?.toString() ?? '',
       animalCount: map['animalCount']?.toString() ?? '',
-      fishingType: map['fishingType']?.toString() ?? 'නැත',
+      fishingType: map['fishingType']?.toString() ?? '',
+      updatedBy: map['updatedBy']?.toString(), // 🟢
+      updatedAt: parsedDate,                   // 🟢
     );
   }
 }

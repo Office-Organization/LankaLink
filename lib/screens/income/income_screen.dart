@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../core/app_theme.dart';
 import '../../core/app_constants.dart';
 import 'income_view_model.dart';
-import '../../widgets/app_button.dart'; // AppButton එක ඇතුළත් කර ඇත
+import '../../widgets/app_button.dart'; 
 
 class IncomeScreen extends StatefulWidget {
   const IncomeScreen({super.key});
@@ -14,7 +14,6 @@ class IncomeScreen extends StatefulWidget {
 }
 
 class _IncomeScreenState extends State<IncomeScreen> {
-  // ආදායම් තොරතුරු සංස්කරණය කරනවාද යන්න තීරණය කරන State variable එක
   bool _isEditingIncomeInfo = false;
 
   @override
@@ -46,11 +45,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
               child: CircularProgressIndicator(color: AppColors.primary),
             )
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24), // Housing එකේ වගේ padding එක all(24) කළා
+              padding: const EdgeInsets.all(24), 
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Error message display area (Housing Design)
                   if (vm.error != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -72,9 +70,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
                       ),
                     ),
 
-                  // ==========================================
-                  // අගුළු දැමූ ගෘහ මූලික අංකය (Locked House ID)
-                  // ==========================================
                   _buildLabel('ගෘහ මූලික අංකය'),
                   TextFormField(
                     initialValue: vm.houseNumber,
@@ -82,11 +77,11 @@ class _IncomeScreenState extends State<IncomeScreen> {
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey, // අළු පැහැති අකුරු
+                      color: Colors.grey, 
                     ),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: const Color(0xFFF5F5F5), // ලා අළු පැහැති පසුබිම
+                      fillColor: const Color(0xFFF5F5F5), 
                       contentPadding: const EdgeInsets.symmetric(vertical: 16),
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -96,28 +91,32 @@ class _IncomeScreenState extends State<IncomeScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // නව View/Edit ලොජික් එක ඇතුළත් කළ ආදායම් තොරතුරු කොටස
                   _buildIncomeSection(details, vm),
+
+                  // 🟢 දත්ත යාවත්කාලීන කළ ලොගය (Update Log)
+                  _buildUpdateLog(details.updatedBy, details.updatedAt),
 
                   const SizedBox(height: 40),
 
-                  // Submit Data / Next Page Button (Housing Design - AppButton)
                   AppButton(
                     label: 'ඊළඟ පිටුවට',
                     isLoading: vm.isBusy,
                     onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final currentHouseNumber = vm.houseNumber;
+
                       final success = await vm.save();
-                      if (success && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                      if (success) {
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(
                             content: Text('දත්ත සාර්ථකව සුරැකිණි!'),
                             backgroundColor: AppColors.success,
                           ),
                         );
-                        Navigator.pushNamed(
-                          context,
+                        navigator.pushNamed(
                           Routes.assetsMain,
-                          arguments: vm.houseNumber,
+                          arguments: currentHouseNumber,
                         );
                       }
                     },
@@ -129,12 +128,9 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  // View Mode සහ Edit Mode පාලනය කරන ප්‍රධාන කොටස
   Widget _buildIncomeSection(dynamic details, IncomeViewModel vm) {
-    // දත්ත දැනටමත් ඇතුළත් කර ඇත්දැයි බැලීම
     final hasData = details.mainIncome != null && details.mainIncome.isNotEmpty;
 
-    // View Mode (දත්ත පෙන්වන කොටුව)
     if (hasData && !_isEditingIncomeInfo) {
       return Container(
         padding: const EdgeInsets.all(16),
@@ -163,7 +159,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
             _buildViewRow('ප්‍රධාන ආදායම් මාර්ග:', details.mainIncome),
             _buildViewRow('අමතර ආදායම් මාර්ග:', details.extraIncome),
             _buildViewRow('රැකියාව:', details.jobType),
-            if (details.jobType != 'නැත') ...[
+            if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
               _buildViewRow('  • තනතුර:', details.jobPosition),
               _buildViewRow('  • ආයතනය:', details.jobInstitute),
             ],
@@ -176,7 +172,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
             _buildViewRow('සත්ත්ව කර්මාන්තය:', details.animalHusbandryType),
             if (details.animalHusbandryType == 'වෙනත්')
               _buildViewRow('  • වර්ගය:', details.animalHusbandryOther),
-            if (details.animalHusbandryType != 'නැත')
+            if (details.animalHusbandryType != 'නැත' && details.animalHusbandryType.isNotEmpty)
               _buildViewRow('  • සතුන් ගණන:', details.animalCount?.toString()),
             _buildViewRow('ධීවර කර්මාන්තය:', details.fishingType),
           ],
@@ -184,7 +180,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
       );
     }
 
-    // Edit Mode (දත්ත වෙනස් කරන Forms)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -207,6 +202,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('ප්‍රධාන ආදායම් මාර්ග'),
         _buildDropdown(
           value: details.mainIncome,
+          hintText: 'ප්‍රධාන ආදායමක් තිබේද?',
           items: ['ඇත', 'නැත'],
           onChanged: (val) => vm.updateField(mainIncome: val),
         ),
@@ -215,6 +211,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('අමතර ආදායම් මාර්ග'),
         _buildDropdown(
           value: details.extraIncome,
+          hintText: 'අමතර ආදායමක් තිබේද?',
           items: ['ඇත', 'නැත'],
           onChanged: (val) => vm.updateField(extraIncome: val),
         ),
@@ -223,6 +220,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('රැකියාව'),
         _buildDropdown(
           value: details.jobType,
+          hintText: 'රැකියාවේ වර්ගය තෝරන්න',
           items: [
             'රජයේ',
             'පුද්ගලික අංශයේ',
@@ -233,8 +231,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
           onChanged: (val) => vm.updateField(jobType: val),
         ),
 
-        // Logic: රැකියාවක් ඇත්නම් පමණක් තනතුර සහ ආයතනය පෙන්වන්න
-        if (details.jobType != 'නැත') ...[
+        if (details.jobType != 'නැත' && details.jobType.isNotEmpty) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(16),
@@ -245,14 +242,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'තනතුර',
-                  style: TextStyle(
-                    fontFamily: 'UNSamantha',
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('තනතුර', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextFormField(
                   initialValue: details.jobPosition,
@@ -260,14 +250,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
                   decoration: _inputStyle(),
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'ආයතනය',
-                  style: TextStyle(
-                    fontFamily: 'UNSamantha',
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                const Text('ආයතනය', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
                 TextFormField(
                   initialValue: details.jobInstitute,
@@ -283,10 +266,10 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('සංචාරක'),
         _buildDropdown(
           value: details.tourismType,
+          hintText: 'සංචාරක කර්මාන්තයේ නියැලෙන්නේද?',
           items: ['සේවා සැපයීම', 'පහසුකම් සැපයීම', 'වෙනත්', 'නැත'],
           onChanged: (val) => vm.updateField(tourismType: val),
         ),
-        // Logic: වෙනත් නම් විස්තරය අසන්න
         if (details.tourismType == 'වෙනත්') ...[
           const SizedBox(height: 8),
           TextFormField(
@@ -300,6 +283,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('කෘෂිකාර්මික'),
         _buildDropdown(
           value: details.agricultureType,
+          hintText: 'කෘෂිකාර්මික කටයුතු',
           items: ['තේ', 'වී', 'රබර්', 'පොල්', 'වෙනත්', 'නැත'],
           onChanged: (val) => vm.updateField(agricultureType: val),
         ),
@@ -316,14 +300,8 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('සත්ත්ව කර්මාන්තය'),
         _buildDropdown(
           value: details.animalHusbandryType,
-          items: [
-            'ඌරන්',
-            'කුකුළන්',
-            'හරකුන්',
-            'එළුවන්',
-            'වෙනත්',
-            'නැත',
-          ],
+          hintText: 'සත්ත්ව කර්මාන්තය',
+          items: ['ඌරන්', 'කුකුළන්', 'හරකුන්', 'එළුවන්', 'වෙනත්', 'නැත'],
           onChanged: (val) => vm.updateField(animalHusbandryType: val),
         ),
         if (details.animalHusbandryType == 'වෙනත්') ...[
@@ -334,17 +312,9 @@ class _IncomeScreenState extends State<IncomeScreen> {
             decoration: _inputStyle(hint: 'කුමන සතුන්ද?'),
           ),
         ],
-        // Logic: නැත හැර වෙනත් එකක් තේරුවහොත් සතුන් ගණන අසන්න
-        if (details.animalHusbandryType != 'නැත') ...[
+        if (details.animalHusbandryType != 'නැත' && details.animalHusbandryType.isNotEmpty) ...[
           const SizedBox(height: 12),
-          const Text(
-            'සතුන් ගණන',
-            style: TextStyle(
-              fontFamily: 'UNSamantha',
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          const Text('සතුන් ගණන', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 13, fontWeight: FontWeight.bold)),
           const SizedBox(height: 6),
           TextFormField(
             initialValue: details.animalCount?.toString(),
@@ -358,6 +328,7 @@ class _IncomeScreenState extends State<IncomeScreen> {
         _buildLabel('ධීවර කර්මාන්තය'),
         _buildDropdown(
           value: details.fishingType,
+          hintText: 'ධීවර කර්මාන්තය',
           items: ['කරදිය', 'මිරිදිය', 'සුරතල් මසුන්', 'නැත'],
           onChanged: (val) => vm.updateField(fishingType: val),
         ),
@@ -365,7 +336,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  // View Mode එකේ පේළි පෙන්වීමට සරල Widget එකක්
   Widget _buildViewRow(String label, String? value) {
     if (value == null || value.isEmpty) return const SizedBox.shrink();
     return Padding(
@@ -385,7 +355,6 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  // Housing Design - Updated to include explicit color and styling
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
@@ -418,40 +387,97 @@ class _IncomeScreenState extends State<IncomeScreen> {
     );
   }
 
-  // Housing Design - Utilizes InputDecorator instead of custom container
+  // 🟢 හිස් (Empty) Dropdown එකක් පෙන්වීම සඳහා සකසන ලද Dropdown Widget එක
   Widget _buildDropdown({
     required String? value,
     required List<String> items,
     required Function(String?) onChanged,
+    required String hintText,
   }) {
-    String dropdownValue = (value != null && items.contains(value))
-        ? value
-        : items.first;
+    String? dropdownValue = (value != null && items.contains(value)) ? value : null;
 
-    if (value != dropdownValue) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        onChanged(dropdownValue);
-      });
+    return DropdownButtonFormField<String>(
+      value: dropdownValue,
+      hint: Text(hintText, style: const TextStyle(fontFamily: 'UNGanganee', color: Colors.black54)),
+      isExpanded: true,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: AppColors.fieldFill,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      items: items.map((String item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(item, style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 16)),
+        );
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  // 🟢 ලොගය පෙන්වන Widget එක 
+  Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
+    if (updatedBy == null && updatedAt == null) {
+      return Container(
+        margin: const EdgeInsets.only(top: 24),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.green.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'මෙම ගෙදරට අදාළව මින් පෙර ආදායම් තොරතුරු පද්ධතියට ඇතුළත් කර නොමැත. මෙය නව ඇතුළත් කිරීමකි.',
+                style: TextStyle(fontFamily: 'UNGanganee', fontSize: 14, color: Colors.green.shade900),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
-    return InputDecorator(
-      decoration: const InputDecoration(), // AppTheme එකේ තියෙන inputDecorationTheme එක මගින් හැඩගැන්වේ
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: dropdownValue,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down),
-          items: items.map((String item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(
-                item,
-                style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 16),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
+    final dateStr = updatedAt != null 
+        ? "${updatedAt.year}-${updatedAt.month.toString().padLeft(2, '0')}-${updatedAt.day.toString().padLeft(2, '0')}  |  ${updatedAt.hour}:${updatedAt.minute.toString().padLeft(2, '0')}" 
+        : "නොදන්නා දිනයකි";
+        
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blueGrey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 20, color: Colors.blueGrey.shade700),
+              const SizedBox(width: 8),
+              Text('දත්ත යාවත්කාලීන ලොගය', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueGrey.shade800)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('අවසන් වරට වෙනස් කළේ: $updatedBy', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+          const SizedBox(height: 4),
+          Text('දිනය සහ වේලාව: $dateStr', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+        ],
       ),
     );
   }

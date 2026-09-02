@@ -14,7 +14,6 @@ class BasicDetailsScreen extends StatefulWidget {
 }
 
 class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
-  // ගෘහ මූලිකයා සාමාජික ලැයිස්තුවෙන් තෝරන නිසා Name සහ NIC controllers අවශ්‍ය නොවේ
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
   late TextEditingController _antiSocialController;
@@ -41,7 +40,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
     final vm = context.watch<BasicDetailsViewModel>();
     final details = vm.details;
 
-    // දැනට තෝරාගෙන ඇති ගෘහ මූලිකයාගේ ID එක සොයා ගැනීම
     String? currentHeadId;
     try {
       currentHeadId = details.members
@@ -66,9 +64,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
         ),
         centerTitle: true,
       ),
-      // ⚠️ මෙතනදී මුළු Screen එකම Loading indicator එකකින් replace කිරීම වෙනුවට
-      // බොත්තම මත පමණක් Loading පෙන්වීමට කටයුතු කිරීම වඩාත් සුදුසුය.
-      // එනමුදු දැනට ඇති කේතය අනුව:
       body: vm.isBusy
           ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
           : SingleChildScrollView(
@@ -94,12 +89,10 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ගෘහ මූලිකයාගේ තොරතුරු පෙන්වන කොටස
                   _buildPersonalInfoSection(details, vm),
 
                   const SizedBox(height: 32),
 
-                  // පවුලේ සාමාජිකයන්ගේ ලැයිස්තුව
                   ExpansionTile(
                     shape: const Border(),
                     collapsedShape: const Border(),
@@ -121,7 +114,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
 
                         return ListTile(
                           contentPadding: EdgeInsets.zero,
-                          // Radio button මගින් ගෘහ මූලිකයා තේරීම
                           leading: Radio<String>(
                             value: member.id,
                             groupValue: currentHeadId,
@@ -161,7 +153,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                                   );
                                   if (updatedMember != null) {
                                     vm.updateMember(updatedMember);
-                                    // යාවත්කාලීන කළේ ගෘහ මූලිකයාව නම්, ප්‍රධාන දත්තද Update කරන්න
                                     if (isHead) {
                                       vm.updateField(
                                         headName: updatedMember.fullName,
@@ -177,7 +168,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                                 icon: const Icon(Icons.delete, color: AppColors.danger),
                                 onPressed: () {
                                   vm.removeMember(member.id);
-                                  // ගෘහ මූලිකයාව Delete කළේ නම් එය ඉවත් කරන්න
                                   if (isHead) {
                                     vm.updateField(headName: '', nic: '', headGender: 'පිරිමි', dob: '');
                                   }
@@ -202,7 +192,6 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                             );
                             if (newMember != null) {
                               vm.addMember(newMember);
-                              // පළමු සාමාජිකයාව ඇතුළත් කළ විට ස්වයංක්‍රීයව ඔහුව ගෘහ මූලිකයා කිරීම
                               if (details.members.isEmpty && details.headName.isEmpty) {
                                 vm.updateField(
                                   headName: newMember.fullName,
@@ -249,6 +238,11 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                       decoration: const InputDecoration(hintText: 'විස්තරය මෙහි ලියන්න...'),
                     ),
                   ],
+
+                  // 🟢 දත්ත යාවත්කාලීන කළ ලොගය (Update Log)
+                  if (details.updatedBy != null || details.updatedAt != null)
+                    _buildUpdateLog(details.updatedBy, details.updatedAt),
+
                   const SizedBox(height: 40),
 
                   Center(
@@ -261,7 +255,7 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), 
                           elevation: 4
                         ),
-                        // 🟢 FIX: Async/Await සහ context.mounted භාවිතය නිවැරදි කිරීම 
+                        // 🟢 FIX: Buffering ගැටලුව නිරාකරණය කිරීම
                         onPressed: () async {
                           if (details.headName.isEmpty) {
                              ScaffoldMessenger.of(context).showSnackBar(
@@ -270,23 +264,18 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                              return;
                           }
                           
-                          // Navigator එක භාවිතයට ගැනීමට පෙර Current Context එක ලබාගැනීම
-                          final currentContext = context;
+                          // Navigator සහ Messenger කලින්ම capture කරගැනීම
+                          final navigator = Navigator.of(context);
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
                           final currentHouseNumber = vm.houseNumber;
                           
                           final success = await vm.save();
                           
-                          if (success && currentContext.mounted) {
-                            ScaffoldMessenger.of(currentContext).showSnackBar(
+                          if (success) {
+                            scaffoldMessenger.showSnackBar(
                               const SnackBar(content: Text('දත්ත සාර්ථකව සුරැකිණි!'))
                             );
-                            
-                            // ඊළඟ පිටුවට යාම සඳහා
-                            Navigator.pushNamed(
-                              currentContext, 
-                              Routes.housing, 
-                              arguments: currentHouseNumber
-                            );
+                            navigator.pushNamed(Routes.housing, arguments: currentHouseNumber);
                           }
                         },
                         child: const Text('සුරකින්න', style: TextStyle(fontFamily: 'UNSamantha', fontSize: 22, color: AppColors.white, fontWeight: FontWeight.bold)),
@@ -296,6 +285,40 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  // 🟢 ලොගය පෙන්වන කොටස
+  Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
+    final dateStr = updatedAt != null 
+        ? "${updatedAt.year}-${updatedAt.month.toString().padLeft(2, '0')}-${updatedAt.day.toString().padLeft(2, '0')}  |  ${updatedAt.hour}:${updatedAt.minute.toString().padLeft(2, '0')}" 
+        : "නොදන්නා දිනයකි";
+        
+    return Container(
+      margin: const EdgeInsets.only(top: 32),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blueGrey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 20, color: Colors.blueGrey.shade700),
+              const SizedBox(width: 8),
+              Text('දත්ත යාවත්කාලීන ලොගය', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueGrey.shade800)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('අවසන් වරට වෙනස් කළේ: ${updatedBy ?? "පද්ධතිය මගින්"}', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+          const SizedBox(height: 4),
+          Text('දිනය සහ වේලාව: $dateStr', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+        ],
+      ),
     );
   }
 

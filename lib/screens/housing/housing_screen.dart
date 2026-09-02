@@ -5,7 +5,6 @@ import '../../core/app_theme.dart';
 import '../../core/app_constants.dart';
 import 'housing_view_model.dart';
 import '../../widgets/app_button.dart';
-// AppScreen එක වෙනුවට අපි කෙලින්ම Scaffold එකක් භාවිතා කරනවා (Basic Details එකේ වගේ)
 
 class HousingScreen extends StatefulWidget {
   const HousingScreen({super.key});
@@ -100,6 +99,9 @@ class _HousingScreenState extends State<HousingScreen> {
                   // නව View/Edit ලොජික් එක ඇතුළත් කළ නිවාස තොරතුරු කොටස
                   _buildHousingSection(details, vm),
 
+               
+                  _buildUpdateLog(details.updatedBy, details.updatedAt),
+
                   const SizedBox(height: 40),
 
                   // Submit Data / Next Page Button
@@ -107,18 +109,22 @@ class _HousingScreenState extends State<HousingScreen> {
                     label: 'ඊළඟ පිටුවට',
                     isLoading: vm.isBusy,
                     onPressed: () async {
+                      final navigator = Navigator.of(context);
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
+                      final currentHouseNumber = vm.houseNumber;
+                      
                       final success = await vm.save();
-                      if (success && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text('දත්ත සාර්ථකව සුරැකිණි!'),
+                      
+                      if (success) {
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('දත්ත සාර්ථකව සුරැකිණි!'),
                             backgroundColor: AppColors.success,
                           ),
                         );
-                        Navigator.pushNamed(
-                          context,
+                        navigator.pushNamed(
                           Routes.income,
-                          arguments: vm.houseNumber,
+                          arguments: currentHouseNumber,
                         );
                       }
                     },
@@ -132,7 +138,7 @@ class _HousingScreenState extends State<HousingScreen> {
 
   // View Mode සහ Edit Mode පාලනය කරන ප්‍රධාන කොටස
   Widget _buildHousingSection(dynamic details, HousingViewModel vm) {
-    // දත්ත දැනටමත් ඇතුළත් කර ඇත්දැයි බැලීම (උදාහරණයක් ලෙස 'ස්වභාවය' පිරී ඇත්දැයි බලමු)
+    // දත්ත දැනටමත් ඇතුළත් කර ඇත්දැයි බැලීම
     final hasData = details.nature != null && details.nature!.isNotEmpty;
 
     // View Mode (දත්ත පෙන්වන කොටුව)
@@ -161,13 +167,13 @@ class _HousingScreenState extends State<HousingScreen> {
               ],
             ),
             const Divider(),
-            _buildViewRow('නිවසක් තිබේද:', details.hasHouse == true ? 'ඇත' : 'නැත'),
+            _buildViewRow('නිවසක් තිබේද:', details.hasHouse == true ? 'ඇත' : (details.hasHouse == false ? 'නැත' : '-')),
             _buildViewRow('ස්වභාවය:', details.nature ?? '-'),
             _buildViewRow('සනීපාරක්ෂක:', details.sanitation ?? '-'),
             _buildViewRow('විදුලිය:', details.electricity ?? '-'),
             _buildViewRow('ජලය:', details.water ?? '-'),
-            _buildViewRow('ස්ථාවර දුරකථන:', (details.hasFixedPhone ?? false) ? 'ඇත' : 'නැත'),
-            _buildViewRow('ජංගම දුරකථන:', (details.hasMobilePhone ?? false) ? 'ඇත' : 'නැත'),
+            _buildViewRow('ස්ථාවර දුරකථන:', (details.hasFixedPhone == true) ? 'ඇත' : 'නැත'),
+            _buildViewRow('ජංගම දුරකථන:', (details.hasMobilePhone == true) ? 'ඇත' : 'නැත'),
             _buildViewRow('සිග්නල්:', details.signal ?? '-'),
           ],
         ),
@@ -198,7 +204,7 @@ class _HousingScreenState extends State<HousingScreen> {
         Row(
           children: [
             const Text('ඇත', style: TextStyle(fontFamily: 'UNGanganee', fontSize: 16)),
-            Radio<bool>(
+            Radio<bool?>( // bool? ලෙස යෙදීමෙන් මුලදී කිසිවක් තෝරා නොමැති ලෙස (null) තැබිය හැක
               value: true,
               groupValue: details.hasHouse,
               activeColor: AppColors.primary,
@@ -206,7 +212,7 @@ class _HousingScreenState extends State<HousingScreen> {
             ),
             const SizedBox(width: 20),
             const Text('නැත', style: TextStyle(fontFamily: 'UNGanganee', fontSize: 16)),
-            Radio<bool>(
+            Radio<bool?>(
               value: false,
               groupValue: details.hasHouse,
               activeColor: AppColors.success,
@@ -219,6 +225,7 @@ class _HousingScreenState extends State<HousingScreen> {
         _buildLabel('ස්වභාවය'),
         _buildDropdown(
           value: details.nature,
+          hintText: 'ස්වභාවය තෝරන්න',
           items: [
             'මහල් නිවාස (ෆ්ලැට්)',
             'ස්ථිර තනි',
@@ -232,7 +239,8 @@ class _HousingScreenState extends State<HousingScreen> {
         _buildLabel('සනීපාරක්ෂක පහසුකම්'),
         _buildDropdown(
           value: details.sanitation,
-          items: ['ජල මුද්රිත', 'වල'],
+          hintText: 'පහසුකම තෝරන්න',
+          items: ['ජල මුද්‍රිත', 'වල'],
           onChanged: (val) => vm.updateField(sanitation: val),
         ),
         const SizedBox(height: 16),
@@ -240,6 +248,7 @@ class _HousingScreenState extends State<HousingScreen> {
         _buildLabel('විදුලිය'),
         _buildDropdown(
           value: details.electricity,
+          hintText: 'විදුලිය ඇත/නැත තෝරන්න',
           items: ['ඇත', 'නැත'],
           onChanged: (val) => vm.updateField(electricity: val),
         ),
@@ -248,11 +257,12 @@ class _HousingScreenState extends State<HousingScreen> {
         _buildLabel('ජලය'),
         _buildDropdown(
           value: details.water,
+          hintText: 'ජල මූලාශ්‍රය තෝරන්න',
           items: [
             'වෝටර් බෝඩ්',
             'ආරක්ෂිත ළිං',
             'අනාරක්ෂිත ළිං',
-            'ප්රජා ජල ව්යාපෘත',
+            'ප්‍රජා ජල ව්‍යාපෘති',
           ],
           onChanged: (val) => vm.updateField(water: val),
         ),
@@ -283,6 +293,7 @@ class _HousingScreenState extends State<HousingScreen> {
         _buildLabel('සිග්නල්'),
         _buildDropdown(
           value: details.signal,
+          hintText: 'සිග්නල් තත්වය තෝරන්න',
           items: ['3G', '4G', '5G', 'නැත'],
           onChanged: (val) => vm.updateField(signal: val),
         ),
@@ -299,10 +310,10 @@ class _HousingScreenState extends State<HousingScreen> {
         children: [
           SizedBox(
             width: 130,
-            child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13)),
+            child: Text(label, style: const TextStyle(color: Colors.black54, fontSize: 13, fontFamily: 'UNGanganee')),
           ),
           Expanded(
-            child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            child: Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, fontFamily: 'UNGanganee')),
           ),
         ],
       ),
@@ -324,39 +335,103 @@ class _HousingScreenState extends State<HousingScreen> {
     );
   }
 
+  // 🟢 Dropdown එක හිස්ව තබාගැනීමට සකස් කරන ලද නව කේතය
   Widget _buildDropdown({
     required String? value,
     required List<String> items,
     required Function(String?) onChanged,
+    required String hintText,
   }) {
-    String dropdownValue = (value != null && items.contains(value))
-        ? value
-        : items.first;
+    // අගයක් නොමැති නම් null ලෙස පවතී
+    String? dropdownValue = (value != null && items.contains(value)) ? value : null;
 
-    if (value != dropdownValue) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        onChanged(dropdownValue);
-      });
+    return DropdownButtonFormField<String>(
+      value: dropdownValue,
+      hint: Text(hintText, style: const TextStyle(fontFamily: 'UNGanganee', color: Colors.black54)),
+      isExpanded: true,
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: AppColors.fieldFill,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+      items: items.map((String item) {
+        return DropdownMenuItem(
+          value: item,
+          child: Text(
+            item,
+            style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 16),
+          ),
+        );
+      }).toList(),
+      onChanged: onChanged,
+    );
+  }
+
+  // 🟢 ලොගය පෙන්වන Widget එක 
+  Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
+    // දත්ත නොමැති නම් (අලුත් ගෙදරක් නම්)
+    if (updatedBy == null && updatedAt == null) {
+      return Container(
+        margin: const EdgeInsets.only(top: 24),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.green.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'මෙම ගෙදරට අදාළව මින් පෙර නිවාස තොරතුරු පද්ධතියට ඇතුළත් කර නොමැත. මෙය නව ඇතුළත් කිරීමකි.',
+                style: TextStyle(fontFamily: 'UNGanganee', fontSize: 14, color: Colors.green.shade900),
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
-    return InputDecorator(
-      decoration: const InputDecoration(),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: dropdownValue,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down),
-          items: items.map((String item) {
-            return DropdownMenuItem(
-              value: item,
-              child: Text(
-                item,
-                style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 16),
-              ),
-            );
-          }).toList(),
-          onChanged: onChanged,
-        ),
+    // දත්ත තිබේ නම් (කලින් සංස්කරණය කර ඇත්නම්)
+    final dateStr = updatedAt != null 
+        ? "${updatedAt.year}-${updatedAt.month.toString().padLeft(2, '0')}-${updatedAt.day.toString().padLeft(2, '0')}  |  ${updatedAt.hour}:${updatedAt.minute.toString().padLeft(2, '0')}" 
+        : "නොදන්නා දිනයකි";
+        
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blueGrey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 20, color: Colors.blueGrey.shade700),
+              const SizedBox(width: 8),
+              Text('දත්ත යාවත්කාලීන ලොගය', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueGrey.shade800)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('අවසන් වරට වෙනස් කළේ: $updatedBy', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+          const SizedBox(height: 4),
+          Text('දිනය සහ වේලාව: $dateStr', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+        ],
       ),
     );
   }

@@ -12,7 +12,6 @@ class FamilyStep extends StatefulWidget {
 }
 
 class _FamilyStepState extends State<FamilyStep> {
-  // Retains the last searched house number across searches and widget rebuilds
   static String _lastSearchedHouseNumber = '';
 
   final _houseNumberCtrl = TextEditingController();
@@ -20,13 +19,11 @@ class _FamilyStepState extends State<FamilyStep> {
   final _specialAmountCtrl = TextEditingController();
   final _specialDescCtrl = TextEditingController(); 
   
-  // අස්වැසුම දත්ත සඳහා නව පාලක (Controllers)
   final _aswasumaAmountCtrl = TextEditingController();
   String? _aswasumaCategory;
   
   bool _isEditingSpecialNeeds = false; 
 
-  // අස්වැසුම කාණ්ඩ ලැයිස්තුව
   final List<String> _aswasumaCategories = [
     'දුප්පත්',
     'අන්ත දුප්පත්',
@@ -41,10 +38,8 @@ class _FamilyStepState extends State<FamilyStep> {
     _specialAmountCtrl.addListener(_updateSpecialNeeds);
     _specialDescCtrl.addListener(_updateSpecialNeeds);
     
-    // නව අස්වැසුම දත්ත සඳහා Listener
     _aswasumaAmountCtrl.addListener(_updateAswasumaDetails);
 
-    // Automatically fill the search bar with the last searched item
     final currentHouseNumber = context.read<SurveyViewModel>().survey.houseNumber;
     if (_lastSearchedHouseNumber.isNotEmpty) {
       _houseNumberCtrl.text = _lastSearchedHouseNumber;
@@ -52,7 +47,6 @@ class _FamilyStepState extends State<FamilyStep> {
       _houseNumberCtrl.text = currentHouseNumber;
     }
 
-    // Place the cursor at the end of the text
     _houseNumberCtrl.selection = TextSelection.fromPosition(
       TextPosition(offset: _houseNumberCtrl.text.length),
     );
@@ -70,7 +64,6 @@ class _FamilyStepState extends State<FamilyStep> {
     context.read<SurveyViewModel>().updateSpecialNeeds(count, amount, descText);
   }
 
-  // අස්වැසුම දත්ත යාවත්කාලීන කිරීම සඳහා (ViewModel එක Update කළ පසු මෙය සක්‍රිය කරන්න)
   void _updateAswasumaDetails() {
     if (!mounted) return;
     // final amountText = _aswasumaAmountCtrl.text.trim();
@@ -241,10 +234,72 @@ class _FamilyStepState extends State<FamilyStep> {
     );
   }
 
+  // 🟢 ලොගය පෙන්වන Widget එක 
+  Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
+    // දත්ත නොමැති නම් (අලුත් ගෙදරක් නම්)
+    if (updatedBy == null && updatedAt == null) {
+      return Container(
+        margin: const EdgeInsets.only(top: 24),
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.green.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info_outline, color: Colors.green.shade700),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'මෙම ගෙදරට අදාළව මින් පෙර කිසිදු තොරතුරක් පද්ධතියට ඇතුළත් කර නොමැත. මෙය නව ඇතුළත් කිරීමකි.',
+                style: TextStyle(fontFamily: 'UNGanganee', fontSize: 14, color: Colors.green.shade900),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // දත්ත තිබේ නම් (කලින් සංස්කරණය කර ඇත්නම්)
+    final dateStr = updatedAt != null 
+        ? "${updatedAt.year}-${updatedAt.month.toString().padLeft(2, '0')}-${updatedAt.day.toString().padLeft(2, '0')}  |  ${updatedAt.hour}:${updatedAt.minute.toString().padLeft(2, '0')}" 
+        : "නොදන්නා දිනයකි";
+        
+    return Container(
+      margin: const EdgeInsets.only(top: 24),
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blueGrey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blueGrey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 20, color: Colors.blueGrey.shade700),
+              const SizedBox(width: 8),
+              Text('දත්ත යාවත්කාලීන ලොගය', style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 15, color: Colors.blueGrey.shade800)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('අවසන් වරට වෙනස් කළේ: $updatedBy', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+          const SizedBox(height: 4),
+          Text('දිනය සහ වේලාව: $dateStr', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<SurveyViewModel>();
-    final family = vm.survey.family;
+    final survey = vm.survey;
+    final family = survey.family;
     final members = family.members;
     
     final adults = members.where((m) => m.isAdult).toList();
@@ -300,7 +355,12 @@ class _FamilyStepState extends State<FamilyStep> {
             child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
           ),
 
-        if (!vm.isBusy && vm.survey.houseNumber.isNotEmpty) ...[
+        if (!vm.isBusy && survey.houseNumber.isNotEmpty) ...[
+          
+          // 🟢 මෙහි Update Log එක පෙන්වනු ලබයි
+          _buildUpdateLog(survey.updatedBy, survey.updatedAt),
+          const SizedBox(height: 24),
+
           _buildCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -334,7 +394,6 @@ class _FamilyStepState extends State<FamilyStep> {
                   ],
                 ),
                 
-                // අස්වැසුම ඇත යන්න තේරූ විට දිස්වන විකල්ප තොරතුරු
                 if (family.hasAswasuma) ...[
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
@@ -433,7 +492,6 @@ class _FamilyStepState extends State<FamilyStep> {
           BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
-      // සාමාජිකයන් සංස්කරණය (Edit/Delete) අක්‍රිය කර ඇත
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: AppColors.primary.withValues(alpha: 0.1),

@@ -1,4 +1,5 @@
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 🔥 Timestamp හැසිරවීමට මෙය අත්‍යවශ්‍යයි
 
 class FamilyMember {
   final String id;
@@ -52,7 +53,7 @@ class FamilyInfo {
   final bool hasAswasuma;
   final int specialNeedsCount;
   final double specialNeedsAmount;
-  final String specialNeedDescription; // 🔥 අලුතින් එක් කළ කොටස
+  final String specialNeedDescription; 
 
   const FamilyInfo({
     this.members = const [],
@@ -82,20 +83,46 @@ class FamilyInfo {
 class Survey {
   final String houseNumber;
   final FamilyInfo family;
+  
+  // 🔥 අලුතින් එකතු කළ ලොග් විස්තර (Log details)
+  final String? updatedBy;
+  final DateTime? updatedAt;
 
   const Survey({
     this.houseNumber = '',
     this.family = const FamilyInfo(),
+    this.updatedBy, // 🔥
+    this.updatedAt, // 🔥
   });
 
-  Survey copyWith({String? houseNumber, FamilyInfo? family}) => Survey(
+  Survey copyWith({
+    String? houseNumber, 
+    FamilyInfo? family,
+    String? updatedBy,
+    DateTime? updatedAt,
+  }) => Survey(
     houseNumber: houseNumber ?? this.houseNumber,
     family: family ?? this.family,
+    updatedBy: updatedBy ?? this.updatedBy,
+    updatedAt: updatedAt ?? this.updatedAt,
   );
 
   factory Survey.fromMap(Map<String, dynamic> map) {
     final membersList = (map['members'] as List<dynamic>?) ?? [];
     final members = membersList.map((m) => FamilyMember.fromMap(m as Map<String, dynamic>)).toList();
+
+    // 🔥 Timestamp එකක් නම් DateTime එකකට හැරවීම
+    DateTime? parsedDate;
+    if (map['timestamp'] != null) {
+      final t = map['timestamp'];
+      if (t is Timestamp) { // Cloud Firestore Timestamp
+        parsedDate = t.toDate();
+      } else if (t is DateTime) {
+        parsedDate = t;
+      } else {
+        parsedDate = DateTime.tryParse(t.toString());
+      }
+    }
 
     return Survey(
       houseNumber: map['houseNumber'] as String? ?? '',
@@ -104,8 +131,10 @@ class Survey {
         hasAswasuma: map['hasAswasuma'] as bool? ?? false,
         specialNeedsCount: map['specialNeedsCount'] as int? ?? 0,
         specialNeedsAmount: (map['specialNeedsAmount'] ?? 0.0).toDouble(),
-        specialNeedDescription: map['specialNeedDescription'] as String? ?? '', // 🔥 අලුතින් එක් කළ කොටස
+        specialNeedDescription: map['specialNeedDescription'] as String? ?? '', 
       ),
+      updatedBy: map['updatedBy']?.toString(), // 🔥
+      updatedAt: parsedDate,                   // 🔥
     );
   }
 }

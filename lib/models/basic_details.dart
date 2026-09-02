@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // 🔥 Timestamp හැසිරවීමට මෙය අත්‍යවශ්‍යයි
+
 class BasicDetails {
   final String houseNumber;
   final String headName;
@@ -10,8 +12,11 @@ class BasicDetails {
   final bool hasAntiSocialActivities;
   final String antiSocialDescription;
   
-  // වෙනම තිබූ children සහ otherMembers වෙනුවට දැන් ඇත්තේ එකම members ලිස්ට් එකකි.
   final List<FamilyMember> members;
+
+  // 🟢 අලුතින් එකතු කළ ලොග් විස්තර (Log details)
+  final String? updatedBy;
+  final DateTime? updatedAt;
 
   BasicDetails({
     this.houseNumber = '',
@@ -25,6 +30,8 @@ class BasicDetails {
     this.hasAntiSocialActivities = false,
     this.antiSocialDescription = '',
     this.members = const [],
+    this.updatedBy, // 🟢
+    this.updatedAt, // 🟢
   });
 
   BasicDetails copyWith({
@@ -39,6 +46,8 @@ class BasicDetails {
     bool? hasAntiSocialActivities,
     String? antiSocialDescription,
     List<FamilyMember>? members,
+    String? updatedBy,    // 🟢
+    DateTime? updatedAt,  // 🟢
   }) {
     return BasicDetails(
       houseNumber: houseNumber ?? this.houseNumber,
@@ -54,6 +63,8 @@ class BasicDetails {
       antiSocialDescription:
           antiSocialDescription ?? this.antiSocialDescription,
       members: members ?? this.members,
+      updatedBy: updatedBy ?? this.updatedBy, // 🟢
+      updatedAt: updatedAt ?? this.updatedAt, // 🟢
     );
   }
 
@@ -70,6 +81,8 @@ class BasicDetails {
       'hasAntiSocialActivities': hasAntiSocialActivities,
       'antiSocialDescription': antiSocialDescription,
       'members': members.map((m) => m.toMap()).toList(),
+      'updatedBy': updatedBy,
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
 
@@ -78,6 +91,19 @@ class BasicDetails {
     List<FamilyMember> parsedMembers = rawMembers
         .map((item) => FamilyMember.fromMap(Map<String, dynamic>.from(item as Map)))
         .toList();
+
+    // 🟢 Timestamp සහ DateTime නිවැරදිව හසුරුවන කොටස
+    DateTime? parsedDate;
+    if (map['updatedAt'] != null) {
+      final t = map['updatedAt'];
+      if (t is Timestamp) { // Cloud Firestore Timestamp එකක් නම්
+        parsedDate = t.toDate();
+      } else if (t is DateTime) {
+        parsedDate = t;
+      } else {
+        parsedDate = DateTime.tryParse(t.toString());
+      }
+    }
 
     return BasicDetails(
       houseNumber: map['houseNumber']?.toString() ?? '',
@@ -91,6 +117,8 @@ class BasicDetails {
       hasAntiSocialActivities: map['hasAntiSocialActivities'] as bool? ?? false,
       antiSocialDescription: map['antiSocialDescription']?.toString() ?? '',
       members: parsedMembers,
+      updatedBy: map['updatedBy']?.toString(), // 🟢
+      updatedAt: parsedDate,                   // 🟢
     );
   }
 }
