@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'female_headed_summary_screen.dart'; // Import the new summary screen
+import 'female_headed_summary_screen.dart';
+import 'special_needs_summary_screen.dart';
+import 'aswasuma_summary_screen.dart'; // අලුත් පිටුව Import කරගන්න
 
 class PovertyAnalyticsScreen extends StatelessWidget {
   const PovertyAnalyticsScreen({super.key});
@@ -29,20 +31,20 @@ class PovertyAnalyticsScreen extends StatelessWidget {
             context: context,
             title: 'කාන්තා මූලික පවුල්',
             subtitle: 'Female-headed families data',
-            // මෙතනින් Summary පිටුවට යොමු කරයි
             targetScreen: const FemaleHeadedSummaryScreen(),
           ),
           _buildExportCard(
             context: context,
             title: 'විශේෂ අවශ්‍යතා සහිත පවුල්',
             subtitle: 'Families with special needs',
-            targetScreen: null, // Add your next screen here
+            targetScreen: const SpecialNeedsSummaryScreen(), 
           ),
           _buildExportCard(
             context: context,
             title: 'අස්වැසුම ප්‍රතිලාභින',
             subtitle: 'Aswasuma beneficiaries (Poor, Extreme Poor, etc.)',
-            targetScreen: null, // Add your next screen here
+            // අලුත් පිටුවට මෙතැනින් Link කර ඇත
+            targetScreen: const AswasumaSummaryScreen(), 
           ),
           _buildExportCard(
             context: context,
