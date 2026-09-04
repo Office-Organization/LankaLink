@@ -19,7 +19,8 @@ class GNSummaryViewModel extends ChangeNotifier {
     'අස්වැසුම ලබන',
     'විශේෂ අවශ්‍යතා සහිත',
     'සමාජ විරෝධී ක්‍රියාකාරකම්',
-    'කාන්තා මූලික පවුල්'
+    'කාන්තා මූලික පවුල්',
+    'නිවාස නොමැති පවුල්' 
   ];
 
   GNSummaryViewModel() {
@@ -74,6 +75,23 @@ class GNSummaryViewModel extends ChangeNotifier {
     return null; 
   }
 
+  // 🔥 අතිශය නිවැරදිව "නැත" හඳුනාගන්නා ලොජික් එක (Bulletproof check)
+  bool _isNo(dynamic val) {
+    if (val == null) return true; // දත්ත නැත්නම් ඒකත් "නැත"
+    if (val is bool) return !val; // false නම් "නැත"
+    
+    final str = val.toString().trim().toLowerCase();
+    if (str.isEmpty || 
+        str == 'false' || 
+        str == 'no' || 
+        str == '0' || 
+        str == 'null' || 
+        str.contains('නැත')) {
+      return true;
+    }
+    return false;
+  }
+
   Future<void> generateReport(String gn) async {
     selectedGN = gn;
     isGenerating = true;
@@ -99,7 +117,6 @@ class GNSummaryViewModel extends ChangeNotifier {
       int antiSocialFamilyCount = 0;
       int schoolDropouts = 0;
 
-      // 🟢 PDF එක සඳහා අවශ්‍ය අමතර දත්ත ගණනය කිරීම
       int noIncomeGovtAid = 0;
       int noIncomeNoGovtAid = 0;
       int noHousingCount = 0;
@@ -114,7 +131,7 @@ class GNSummaryViewModel extends ChangeNotifier {
         if (hasAswasuma) aswasumaCount++;
         if ((data['specialNeedsCount'] ?? 0) > 0) specialNeedsFamilyCount++;
 
-        // Basic Details
+        // Basic Details Check
         if (data['basicDetails'] is Map) {
           final basicDetails = Map<String, dynamic>.from(data['basicDetails']);
           data['basicDetails'] = basicDetails;
@@ -158,24 +175,37 @@ class GNSummaryViewModel extends ChangeNotifier {
           }
         }
 
-        // 🟢 ආදායම් දත්ත විශ්ලේෂණය (Income Analysis)
+        // Income Details Check
         if (data['incomeDetails'] is Map) {
           final inc = data['incomeDetails'] as Map;
-          bool hasNoJob = (inc['jobType'] == 'නැත' || inc['jobType'] == null || inc['jobType'] == '');
+          bool hasNoJob = _isNo(inc['jobType']); 
           
           if (hasNoJob) {
             if (hasAswasuma) noIncomeGovtAid++; else noIncomeNoGovtAid++;
           }
-          if (inc['agricultureType'] != null && inc['agricultureType'] != 'නැත' && inc['agricultureType'] != '') agriFamilies++;
-          if (inc['animalHusbandryType'] != null && inc['animalHusbandryType'] != 'නැත' && inc['animalHusbandryType'] != '') animalFamilies++;
-          if (inc['fishingType'] != null && inc['fishingType'] != 'නැත' && inc['fishingType'] != '') fishingFamilies++;
+          if (!_isNo(inc['agricultureType'])) agriFamilies++;
+          if (!_isNo(inc['animalHusbandryType'])) animalFamilies++;
+          if (!_isNo(inc['fishingType'])) fishingFamilies++;
         }
 
-        // 🟢 නිවාස දත්ත විශ්ලේෂණය (Housing Analysis)
-        if (data['housingDetails'] is Map) {
-          final hs = data['housingDetails'] as Map;
-          if (hs['houseType'] == 'තාවකාලික' || hs['houseType'] == 'අනවසර') noHousingCount++;
-          if (hs['hasElectricity'] == false || hs['hasWater'] == false) noWaterPowerCount++;
+        // 🔥 නිවාස දත්ත විශ්ලේෂණය (Fail-proof)
+        Map<dynamic, dynamic> hs = {};
+        if (data.containsKey('housingDetails') && data['housingDetails'] is Map) {
+          hs = data['housingDetails'] as Map;
+        }
+
+        bool hasNoHouse = _isNo(hs['hasHouse']);
+        bool hasNoElectricity = _isNo(hs['electricity']);
+        bool hasNoWater = _isNo(hs['water']);
+
+        // නිවසක් නොමැති නම්
+        if (hasNoHouse) {
+          noHousingCount++;
+        }
+        
+        // විදුලිය හෝ ජලය නොමැති නම්
+        if (hasNoElectricity || hasNoWater) {
+          noWaterPowerCount++;
         }
 
         allFamilies.add(data);
@@ -194,11 +224,10 @@ class GNSummaryViewModel extends ChangeNotifier {
         'aswasuma': aswasumaCount,
         'antiSocial': antiSocialFamilyCount,
         'dropouts': schoolDropouts,
-        // PDF Data
         'noIncomeGovtAid': noIncomeGovtAid,
         'noIncomeNoGovtAid': noIncomeNoGovtAid,
-        'noHousingCount': noHousingCount,
-        'noWaterPowerCount': noWaterPowerCount,
+        'noHousingCount': noHousingCount, // 🟢 දැන් නිවැරදිව ගණනය වේ
+        'noWaterPowerCount': noWaterPowerCount, // 🟢 දැන් නිවැරදිව ගණනය වේ
         'agriFamilies': agriFamilies,
         'animalFamilies': animalFamilies,
         'fishingFamilies': fishingFamilies,
@@ -257,6 +286,14 @@ class GNSummaryViewModel extends ChangeNotifier {
            }
         }
         if (!hasAntiSocial) return false;
+      }
+      else if (selectedFilter == 'නිවාස නොමැති පවුල්') {
+        Map<dynamic, dynamic> hs = {};
+        if (family.containsKey('housingDetails') && family['housingDetails'] is Map) {
+          hs = family['housingDetails'] as Map;
+        }
+        // 🔥 ෆිල්ටර් එකෙත් නිවැරදිම ලොජික් එක
+        if (!_isNo(hs['hasHouse'])) return false; 
       }
 
       return true;

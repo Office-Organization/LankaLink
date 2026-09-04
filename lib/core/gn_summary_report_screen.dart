@@ -196,14 +196,13 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
                   ),
                 ),
 
-          // 🟢 PDF එක රෙන්ඩර් කිරීම සඳහා ඇති Off-screen කොටස
           if (vm.reportData.isNotEmpty)
             Positioned(
-              left: -99999, // තිරයෙන් පිටත තබයි
+              left: -99999, 
               child: RepaintBoundary(
                 key: _pdfTableKey,
                 child: Container(
-                  width: 900, // A4 Portrait ප්‍රමාණයට ගැලපෙන්න
+                  width: 900, 
                   color: Colors.white,
                   padding: const EdgeInsets.all(40),
                   child: _buildPdfReportLayout(vm),
@@ -227,15 +226,9 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Text(
-          'ප්‍රජා ශක්ති දිළිඳු බව තුරන් කිරීමේ ජාතික ව්‍යාපාරය', 
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre')
-        ),
+        const Text('ප්‍රජා ශක්ති දිළිඳු බව තුරන් කිරීමේ ජාතික ව්‍යාපාරය', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre')),
         const SizedBox(height: 6),
-        const Text(
-          'ග්‍රාම නිලධාරී වසම් මට්ටමින් තොරතුරු ලබා ගැනීම', 
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre')
-        ),
+        const Text('ග්‍රාම නිලධාරී වසම් මට්ටමින් තොරතුරු ලබා ගැනීම', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre')),
         const SizedBox(height: 24),
 
         Row(
@@ -256,37 +249,37 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
             1: FlexColumnWidth(2.0),
           },
           children: [
-            _buildTableRow('1. මුළු පවුල් ගණන', d['totalFamilies'].toString()),
-            _buildTableRow('     • මුළු ජනගහනය', d['totalPopulation'].toString()),
+            _buildTableRow('1. මුළු පවුල් ගණන', d['totalFamilies']?.toString() ?? '0'),
+            _buildTableRow('     • මුළු ජනගහනය', d['totalPopulation']?.toString() ?? '0'),
             _buildTableRow('     • ස්ත්‍රී / පුරුෂ', 'ස්ත්‍රී: ${d['totalFemale']} | පුරුෂ: ${d['totalMale']}'),
             _buildTableRow('     • ජාතිය', 'සිංහල: ${d['sinhala']} | දමිළ: ${d['tamil']} | මුස්ලිම්: ${d['muslim']}'),
-            _buildTableRow('2. කාන්තා මූලික පවුල් ගණන', d['femaleHeaded'].toString()),
-            _buildTableRow('3. විශේෂ අවශ්‍යතා සහිත පවුල් ගණන', d['specialNeeds'].toString()),
-            _buildTableRow('4. අස්වැසුම ප්‍රතිලාභීන් ගණන', d['aswasuma'].toString()),
-            _buildTableRow('5. ආදායම් මාර්ගයක් නොමැති පවුල් ගණන (රජයේ ආධාර ලබන)', d['noIncomeGovtAid'].toString()),
-            _buildTableRow('6. ආදායම් මාර්ගයක් නොමැති පවුල් ගණන (රජයේ ආධාර නොලබන)', d['noIncomeNoGovtAid'].toString()),
+            _buildTableRow('2. කාන්තා මූලික පවුල් ගණන', d['femaleHeaded']?.toString() ?? '0'),
+            _buildTableRow('3. විශේෂ අවශ්‍යතා සහිත පවුල් ගණන', d['specialNeeds']?.toString() ?? '0'),
+            _buildTableRow('4. අස්වැසුම ප්‍රතිලාභීන් ගණන', d['aswasuma']?.toString() ?? '0'),
+            _buildTableRow('5. ආදායම් මාර්ගයක් නොමැති පවුල් ගණන (රජයේ ආධාර ලබන)', d['noIncomeGovtAid']?.toString() ?? '0'),
+            _buildTableRow('6. ආදායම් මාර්ගයක් නොමැති පවුල් ගණන (රජයේ ආධාර නොලබන)', d['noIncomeNoGovtAid']?.toString() ?? '0'),
             _buildTableRow('7. වෘත්තීය දැනුමක් සහිත නඟා සිටුවිය යුතු පවුල් ගණන', 'තොරතුරු නොමැත'),
             _buildTableRow('8. ඌන උපයෝජිත සම්පත් සහිත පවුල් ගණන', 'තොරතුරු නොමැත'),
             _buildTableRow('9. වසමට අනන්‍ය වු සංවර්ධනය කළ හැකි කර්මාන්ත', 'තොරතුරු නොමැත'),
-            _buildTableRow('10. නිවාස පහසුකම් නොමැති පවුල් ගණන', d['noHousingCount'].toString()),
-            _buildTableRow('11. විදුලිය හා ජල පහසුකම් නොමැති පවුල් ගණන', d['noWaterPowerCount'].toString()),
+            _buildTableRow('10. නිවාස පහසුකම් නොමැති පවුල් ගණන', d['noHousingCount']?.toString() ?? '0'),
+            _buildTableRow('11. විදුලිය හා ජල පහසුකම් නොමැති පවුල් ගණන', d['noWaterPowerCount']?.toString() ?? '0'),
             _buildTableRow('12. වතු නිවාස ගණන', 'තොරතුරු නොමැත'),
             _buildTableRow('13. වැවිලි කර්මාන්තයේ නිරත පවුල් ගණන', 'තොරතුරු නොමැත'),
             _buildTableRow('14. සංචාරක කර්මාන්තය නගා සිටුවීම සඳහා ඇති අවස්ථාවන්', 'තොරතුරු නොමැත'),
-            _buildTableRow('15. කෘෂිකාර්මික පවුල් ගණන', d['agriFamilies'].toString()),
+            _buildTableRow('15. කෘෂිකාර්මික පවුල් ගණන', d['agriFamilies']?.toString() ?? '0'),
             _buildTableRow('16. සංවර්ධනය කළ යුතු වාරි මාර්ග පද්ධති ගණන', 'තොරතුරු නොමැත'),
-            _buildTableRow('17. සත්ත්ව නිෂ්පාදනයට අදාළ රැකියාවල නිරත පවුල් ගණන', d['animalFamilies'].toString()),
-            _buildTableRow('18. ධීවර ක්ෂේත්‍රයට අදාළ රැකියාවල නිරත පවුල් ගණන', d['fishingFamilies'].toString()),
+            _buildTableRow('17. සත්ත්ව නිෂ්පාදනයට අදාළ රැකියාවල නිරත පවුල් ගණන', d['animalFamilies']?.toString() ?? '0'),
+            _buildTableRow('18. ධීවර ක්ෂේත්‍රයට අදාළ රැකියාවල නිරත පවුල් ගණන', d['fishingFamilies']?.toString() ?? '0'),
             _buildTableRow('19. සංවර්ධනය කළ යුතු වෙනත් රැකියාවල නිරත පවුල් ගණන', 'තොරතුරු නොමැත'),
-            _buildTableRow('20. අධ්‍යාපනය (පාසල් නොයන ළමුන් ගණන)', d['dropouts'].toString()),
-            _buildTableRow('21. පාසල් හැර ගිය දරුවන් ගණන', d['dropouts'].toString()),
+            _buildTableRow('20. අධ්‍යාපනය (පාසල් නොයන ළමුන් ගණන)', d['dropouts']?.toString() ?? '0'),
+            _buildTableRow('21. පාසල් හැර ගිය දරුවන් ගණන', d['dropouts']?.toString() ?? '0'),
             _buildTableRow('22. උසස් අධ්‍යාපනයට යොමු නොවූ වෘත්තිය අධ්‍යාපනයට යොමු කළ හැකි පවුල්', 'තොරතුරු නොමැත'),
             _buildTableRow('23. වසමේ ඇති ප්‍රජා ශාලා ගණන', 'තොරතුරු නොමැත'),
             _buildTableRow('24. පවතින වන සත්ත්ව උවදුරු මොනවාද', 'තොරතුරු නොමැත'),
             _buildTableRow('25. සංවර්ධනය විය යුතු අංශයන් හා යෝජිත විසඳුම්', 'තොරතුරු නොමැත'),
             _buildTableRow('26. වසමේ සංවර්ධනය විය යුතු මාර්ග (කි.මි. ගණන)', 'තොරතුරු නොමැත'),
             _buildTableRow('27. විශේෂ කර්මාන්තයක් ආරම්භ කිරිමට කැමත්තක් දක්වන පුද්ගලයින්', 'තොරතුරු නොමැත'),
-            _buildTableRow('28. සමාජ විරෝධි ක්‍රියාකාරකම් පිළිබඳ තොරතුරු (පවුල් ගණන)', d['antiSocial'].toString()),
+            _buildTableRow('28. සමාජ විරෝධි ක්‍රියාකාරකම් පිළිබඳ තොරතුරු (පවුල් ගණන)', d['antiSocial']?.toString() ?? '0'),
             _buildTableRow('29. ආපදා තොරතුරු', 'තොරතුරු නොමැත'),
           ],
         ),
@@ -297,14 +290,8 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
   TableRow _buildTableRow(String title, String value) {
     return TableRow(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Text(title, style: const TextStyle(fontSize: 14, color: Colors.black, fontFamily: 'AbhayaLibre')),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          child: Text(value, style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'AbhayaLibre')),
-        ),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), child: Text(title, style: const TextStyle(fontSize: 14, color: Colors.black, fontFamily: 'AbhayaLibre'))),
+        Padding(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), child: Text(value, style: const TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.bold, fontFamily: 'AbhayaLibre'))),
       ]
     );
   }
@@ -315,12 +302,12 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
-          _summaryBox('මුළු පවුල්', data['totalFamilies'].toString(), Icons.home_rounded, Colors.blue),
-          _summaryBox('මුළු ජනගහනය', data['totalPopulation'].toString(), Icons.groups_rounded, Colors.green),
+          _summaryBox('මුළු පවුල්', data['totalFamilies']?.toString() ?? '0', Icons.home_rounded, Colors.blue),
+          _summaryBox('මුළු ජනගහනය', data['totalPopulation']?.toString() ?? '0', Icons.groups_rounded, Colors.green),
           _summaryBox('ස්ත්‍රී/පුරුෂ', 'ස්: ${data['totalFemale']} | පු: ${data['totalMale']}', Icons.wc_rounded, Colors.purple),
-          _summaryBox('අස්වැසුම ලබන', data['aswasuma'].toString(), Icons.monetization_on_rounded, Colors.orange),
-          _summaryBox('කාන්තා මූලික', data['femaleHeaded'].toString(), Icons.pregnant_woman_rounded, Colors.pink),
-          _summaryBox('විශේෂ අවශ්‍යතා', data['specialNeeds'].toString(), Icons.accessible_rounded, Colors.red),
+          _summaryBox('නිවාස නොමැති', data['noHousingCount']?.toString() ?? '0', Icons.house_outlined, Colors.brown),
+          _summaryBox('විදුලිය/ජලය නැති', data['noWaterPowerCount']?.toString() ?? '0', Icons.water_drop_outlined, Colors.blueGrey),
+          _summaryBox('අස්වැසුම ලබන', data['aswasuma']?.toString() ?? '0', Icons.monetization_on_rounded, Colors.orange),
         ],
       ),
     );
