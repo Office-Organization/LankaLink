@@ -30,14 +30,12 @@ class _GNSummaryReportView extends StatefulWidget {
 
 class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
   bool _isDownloading = false;
-  final GlobalKey _pdfTableKey = GlobalKey(); // 🟢 PDF Table එක හඳුනාගැනීමට Key එක
+  final GlobalKey _pdfTableKey = GlobalKey(); 
 
-  // 🟢 PDF එක Generate කිරීමේ ක්‍රමය
   Future<void> _downloadPDF(GNSummaryViewModel vm) async {
     setState(() => _isDownloading = true);
 
     try {
-      // රෙන්ඩර් වීමට සුළු කාලයක් ලබාදීම
       await Future.delayed(const Duration(milliseconds: 300));
       final boundary = _pdfTableKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       
@@ -53,7 +51,7 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
 
       pdf.addPage(
         pw.Page(
-          pageFormat: PdfPageFormat.a4, // A4 Portrait ලෙස සකසා ඇත
+          pageFormat: PdfPageFormat.a4, 
           margin: const pw.EdgeInsets.all(20),
           build: (pw.Context context) {
             return pw.Center(child: pw.Image(imageProvider));
@@ -223,9 +221,6 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
     );
   }
 
-  // ==============================================================
-  // 🟢 PDF Report එකේ සම්පූර්ණ අන්තර්ගතය සහ වගුව
-  // ==============================================================
   Widget _buildPdfReportLayout(GNSummaryViewModel vm) {
     final d = vm.reportData;
     return Column(
@@ -254,7 +249,6 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
         Container(height: 2, color: Colors.black),
         const SizedBox(height: 24),
 
-        // 🟢 Report Table (කරුණු 28 ආකෘතියට)
         Table(
           border: TableBorder.all(color: Colors.black, width: 1.0),
           columnWidths: const {
@@ -315,9 +309,6 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
     );
   }
 
-  // ==============================================================
-  // UI Display Widgets (Not part of PDF)
-  // ==============================================================
   Widget _buildSummaryCards(GNSummaryViewModel vm) {
     final data = vm.reportData;
     return SingleChildScrollView(
