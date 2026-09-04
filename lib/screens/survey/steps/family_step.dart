@@ -61,6 +61,7 @@ class _FamilyStepState extends State<FamilyStep> {
       TextPosition(offset: _houseNumberCtrl.text.length),
     );
 
+    // Fetch user profile location data
     _loadUserLocationData();
   }
 
@@ -122,7 +123,7 @@ class _FamilyStepState extends State<FamilyStep> {
           _isLoadingLocation = false;
         });
 
-        // 🔴 Pass initial load directly into ViewModel so it doesn't default to empty string on Save
+        // Push initial load directly into ViewModel so it doesn't default to empty string
         Future.microtask(() {
           if (mounted) {
             context.read<SurveyViewModel>().updateLocation(_localAuthority, _selectedGnDivision);
@@ -170,6 +171,7 @@ class _FamilyStepState extends State<FamilyStep> {
     if (!mounted) return;
   }
 
+  // 🟢 THIS IS THE CRITICAL FIX: IT PREVENTS THE SEARCH FROM ERASING THE LOCATION
   Future<void> _handleSearch([String? query]) async {
     final text = (query ?? _houseNumberCtrl.text).trim();
     if (text.isEmpty) return;
@@ -184,8 +186,27 @@ class _FamilyStepState extends State<FamilyStep> {
 
     final vm = context.read<SurveyViewModel>();
     await vm.searchHouse(text);
+    
     if (mounted) {
-      setState(() => _isEditingSpecialNeeds = false);
+      setState(() {
+        _isEditingSpecialNeeds = false;
+        
+        // 1. If the database already had a saved location, update the Dropdowns to show it!
+        if (vm.survey.family.localAuthority.isNotEmpty) {
+          _localAuthority = vm.survey.family.localAuthority;
+          _updateGnListForAuthority(_localAuthority);
+          
+          if (vm.survey.family.gnDivision.isNotEmpty && _gnDivisionsList.contains(vm.survey.family.gnDivision)) {
+            _selectedGnDivision = vm.survey.family.gnDivision;
+          } else if (_gnDivisionsList.isNotEmpty) {
+             _selectedGnDivision = _gnDivisionsList.first;
+             vm.updateLocation(_localAuthority, _selectedGnDivision);
+          }
+        } else {
+          // 2. If the database was empty, push the UI dropdown values back into the ViewModel!
+          vm.updateLocation(_localAuthority, _selectedGnDivision);
+        }
+      });
     }
   }
 
@@ -464,7 +485,6 @@ class _FamilyStepState extends State<FamilyStep> {
                 _gnDivisionsList = _gnDivisionsList.toSet().toList();
               });
               
-              // 🔴 Update the ViewModel immediately
               context.read<SurveyViewModel>().updateLocation(_localAuthority, _selectedGnDivision);
             },
           ),
@@ -492,7 +512,6 @@ class _FamilyStepState extends State<FamilyStep> {
                 _selectedGnDivision = val;
               });
               
-              // 🔴 Update the ViewModel immediately
               context.read<SurveyViewModel>().updateLocation(_localAuthority, val);
             },
           ),

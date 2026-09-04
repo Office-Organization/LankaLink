@@ -87,6 +87,11 @@ class SurveyRepository {
         'specialNeedsCount': family.specialNeedsCount,
         'specialNeedsAmount': family.specialNeedsAmount,
         'specialNeedDescription': family.specialNeedDescription,
+        
+        // 🟢 LOCATION DATA ADDED HERE TO SAVE TO FIRESTORE
+        'localAuthority': family.localAuthority,
+        'gnDivision': family.gnDivision,
+        
         'members': membersData,
         'updatedBy': FirebaseAuth.instance.currentUser?.uid,
         'timestamp': FieldValue.serverTimestamp(),
