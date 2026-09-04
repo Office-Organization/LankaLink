@@ -1,5 +1,5 @@
 import 'package:uuid/uuid.dart';
-import 'package:cloud_firestore/cloud_firestore.dart'; // 🔥 Timestamp හැසිරවීමට මෙය අත්‍යවශ්‍යයි
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class FamilyMember {
   final String id;
@@ -54,6 +54,10 @@ class FamilyInfo {
   final int specialNeedsCount;
   final double specialNeedsAmount;
   final String specialNeedDescription; 
+  
+  // 🔴 ADDED LOCATION FIELDS 
+  final String localAuthority;
+  final String gnDivision;
 
   const FamilyInfo({
     this.members = const [],
@@ -61,6 +65,8 @@ class FamilyInfo {
     this.specialNeedsCount = 0,
     this.specialNeedsAmount = 0.0,
     this.specialNeedDescription = '',
+    this.localAuthority = '', // 🔴
+    this.gnDivision = '',     // 🔴
   });
 
   FamilyInfo copyWith({
@@ -69,6 +75,8 @@ class FamilyInfo {
     int? specialNeedsCount,
     double? specialNeedsAmount,
     String? specialNeedDescription,
+    String? localAuthority, // 🔴
+    String? gnDivision,     // 🔴
   }) {
     return FamilyInfo(
       members: members ?? this.members,
@@ -76,6 +84,8 @@ class FamilyInfo {
       specialNeedsCount: specialNeedsCount ?? this.specialNeedsCount,
       specialNeedsAmount: specialNeedsAmount ?? this.specialNeedsAmount,
       specialNeedDescription: specialNeedDescription ?? this.specialNeedDescription,
+      localAuthority: localAuthority ?? this.localAuthority, // 🔴
+      gnDivision: gnDivision ?? this.gnDivision,             // 🔴
     );
   }
 }
@@ -84,15 +94,14 @@ class Survey {
   final String houseNumber;
   final FamilyInfo family;
   
-  // 🔥 අලුතින් එකතු කළ ලොග් විස්තර (Log details)
   final String? updatedBy;
   final DateTime? updatedAt;
 
   const Survey({
     this.houseNumber = '',
     this.family = const FamilyInfo(),
-    this.updatedBy, // 🔥
-    this.updatedAt, // 🔥
+    this.updatedBy, 
+    this.updatedAt, 
   });
 
   Survey copyWith({
@@ -111,11 +120,10 @@ class Survey {
     final membersList = (map['members'] as List<dynamic>?) ?? [];
     final members = membersList.map((m) => FamilyMember.fromMap(m as Map<String, dynamic>)).toList();
 
-    // 🔥 Timestamp එකක් නම් DateTime එකකට හැරවීම
     DateTime? parsedDate;
     if (map['timestamp'] != null) {
       final t = map['timestamp'];
-      if (t is Timestamp) { // Cloud Firestore Timestamp
+      if (t is Timestamp) { 
         parsedDate = t.toDate();
       } else if (t is DateTime) {
         parsedDate = t;
@@ -132,9 +140,11 @@ class Survey {
         specialNeedsCount: map['specialNeedsCount'] as int? ?? 0,
         specialNeedsAmount: (map['specialNeedsAmount'] ?? 0.0).toDouble(),
         specialNeedDescription: map['specialNeedDescription'] as String? ?? '', 
+        localAuthority: map['localAuthority'] as String? ?? '', // 🔴 READ FROM MAP
+        gnDivision: map['gnDivision'] as String? ?? '',         // 🔴 READ FROM MAP
       ),
-      updatedBy: map['updatedBy']?.toString(), // 🔥
-      updatedAt: parsedDate,                   // 🔥
+      updatedBy: map['updatedBy']?.toString(), 
+      updatedAt: parsedDate,                   
     );
   }
 }

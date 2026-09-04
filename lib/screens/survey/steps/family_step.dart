@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/app_theme.dart';
 import '../survey_view_model.dart';
 import '../../../models/survey.dart';
@@ -23,6 +25,14 @@ class _FamilyStepState extends State<FamilyStep> {
   String? _aswasumaCategory;
   
   bool _isEditingSpecialNeeds = false; 
+
+  // Location Data Variables
+  bool _isLoadingLocation = true;
+  String? _selectedGnDivision;
+  String? _localAuthority;
+  
+  List<Map<String, dynamic>> _authoritiesList = [];
+  List<String> _gnDivisionsList = [];
 
   final List<String> _aswasumaCategories = [
     'දුප්පත්',
@@ -50,6 +60,98 @@ class _FamilyStepState extends State<FamilyStep> {
     _houseNumberCtrl.selection = TextSelection.fromPosition(
       TextPosition(offset: _houseNumberCtrl.text.length),
     );
+
+    _loadUserLocationData();
+  }
+
+  Future<void> _loadUserLocationData() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        if (mounted) setState(() => _isLoadingLocation = false);
+        return;
+      }
+
+      final authSnapshot = await FirebaseFirestore.instance.collection('local_authorities').get();
+      _authoritiesList = authSnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'name_en': data['name_en'] ?? doc.id,
+          'name_si': data['name_si'] ?? '',
+          'gn_divisions': data['gn_divisions'] ?? [],
+        };
+      }).toList();
+
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      String? userAuth;
+      String? userGn;
+
+      if (userDoc.exists && userDoc.data() != null) {
+        final data = userDoc.data()!;
+        userAuth = data['local_authority']?.toString();
+        userGn = data['gn_division']?.toString();
+      }
+
+      if (mounted) {
+        if (userAuth != null && userAuth.isNotEmpty) {
+          bool exists = _authoritiesList.any((a) => a['name_en'] == userAuth);
+          if (exists) {
+            _localAuthority = userAuth;
+          } else if (_authoritiesList.isNotEmpty) {
+            _localAuthority = _authoritiesList.first['name_en'];
+          }
+        } else if (_authoritiesList.isNotEmpty) {
+          _localAuthority = _authoritiesList.first['name_en'];
+        }
+
+        _updateGnListForAuthority(_localAuthority);
+
+        if (userGn != null && userGn.isNotEmpty) {
+          if (!_gnDivisionsList.contains(userGn)) {
+            _gnDivisionsList.add(userGn); 
+          }
+          _selectedGnDivision = userGn;
+        } else if (_gnDivisionsList.isNotEmpty) {
+          _selectedGnDivision = _gnDivisionsList.first;
+        }
+
+        _gnDivisionsList = _gnDivisionsList.toSet().toList();
+
+        setState(() {
+          _isLoadingLocation = false;
+        });
+
+        // 🔴 Pass initial load directly into ViewModel so it doesn't default to empty string on Save
+        Future.microtask(() {
+          if (mounted) {
+            context.read<SurveyViewModel>().updateLocation(_localAuthority, _selectedGnDivision);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user location: $e');
+      if (mounted) setState(() => _isLoadingLocation = false);
+    } 
+  }
+
+  void _updateGnListForAuthority(String? authName) {
+    if (authName == null) {
+      _gnDivisionsList = [];
+      return;
+    }
+    
+    final authMap = _authoritiesList.firstWhere(
+      (element) => element['name_en'] == authName,
+      orElse: () => <String, dynamic>{}, 
+    );
+
+    if (authMap.isNotEmpty) {
+      final gnList = authMap['gn_divisions'] as List<dynamic>? ?? [];
+      _gnDivisionsList = gnList.map((gn) => gn['en'].toString()).toList();
+    } else {
+      _gnDivisionsList = [];
+    }
   }
 
   void _updateSpecialNeeds() {
@@ -66,9 +168,6 @@ class _FamilyStepState extends State<FamilyStep> {
 
   void _updateAswasumaDetails() {
     if (!mounted) return;
-    // final amountText = _aswasumaAmountCtrl.text.trim();
-    // final amount = amountText.isEmpty ? 0.0 : (double.tryParse(amountText) ?? 0.0);
-    // context.read<SurveyViewModel>().updateAswasumaExtraDetails(_aswasumaCategory, amount); 
   }
 
   Future<void> _handleSearch([String? query]) async {
@@ -234,9 +333,7 @@ class _FamilyStepState extends State<FamilyStep> {
     );
   }
 
-  // 🟢 ලොගය පෙන්වන Widget එක 
   Widget _buildUpdateLog(String? updatedBy, DateTime? updatedAt) {
-    // දත්ත නොමැති නම් (අලුත් ගෙදරක් නම්)
     if (updatedBy == null && updatedAt == null) {
       return Container(
         margin: const EdgeInsets.only(top: 24),
@@ -262,7 +359,6 @@ class _FamilyStepState extends State<FamilyStep> {
       );
     }
 
-    // දත්ත තිබේ නම් (කලින් සංස්කරණය කර ඇත්නම්)
     final dateStr = updatedAt != null 
         ? "${updatedAt.year}-${updatedAt.month.toString().padLeft(2, '0')}-${updatedAt.day.toString().padLeft(2, '0')}  |  ${updatedAt.hour}:${updatedAt.minute.toString().padLeft(2, '0')}" 
         : "නොදන්නා දිනයකි";
@@ -290,6 +386,116 @@ class _FamilyStepState extends State<FamilyStep> {
           Text('අවසන් වරට වෙනස් කළේ: $updatedBy', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
           const SizedBox(height: 4),
           Text('දිනය සහ වේලාව: $dateStr', style: const TextStyle(fontFamily: 'UNGanganee', fontSize: 14)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationCard(SurveyViewModel vm) {
+    if (_isLoadingLocation) {
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 12, offset: const Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined, color: AppColors.primary),
+              const SizedBox(width: 8),
+              const Text(
+                'දත්ත රැස් කරන වසම (Location)',
+                style: TextStyle(fontFamily: 'UNSamantha', fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          DropdownButtonFormField<String>(
+            value: _localAuthority,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'පළාත් පාලන ආයතනය (Local Authority)',
+              filled: true,
+              fillColor: AppColors.fieldFill,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            ),
+            hint: const Text('ආයතනය තෝරන්න', style: TextStyle(color: Colors.black54)),
+            items: _authoritiesList.map((auth) {
+              final nameEn = auth['name_en']?.toString() ?? '';
+              final nameSi = auth['name_si']?.toString() ?? '';
+              final displayName = nameSi.isNotEmpty ? '$nameSi ($nameEn)' : nameEn;
+              return DropdownMenuItem<String>(
+                value: nameEn,
+                child: Text(displayName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'UNGanganee')),
+              );
+            }).toList(),
+            onChanged: (String? val) {
+              setState(() {
+                _localAuthority = val;
+                
+                _updateGnListForAuthority(val);
+                
+                if (_gnDivisionsList.isNotEmpty) {
+                  _selectedGnDivision = _gnDivisionsList.first;
+                } else {
+                  _selectedGnDivision = null;
+                }
+                
+                _gnDivisionsList = _gnDivisionsList.toSet().toList();
+              });
+              
+              // 🔴 Update the ViewModel immediately
+              context.read<SurveyViewModel>().updateLocation(_localAuthority, _selectedGnDivision);
+            },
+          ),
+          
+          const SizedBox(height: 16),
+          
+          DropdownButtonFormField<String>(
+            value: _selectedGnDivision,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: 'ග්‍රාම නිලධාරී වසම (GN Division)',
+              filled: true,
+              fillColor: AppColors.fieldFill,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+            ),
+            hint: const Text('වසම තෝරන්න', style: TextStyle(color: Colors.black54)),
+            items: _gnDivisionsList.map((gn) {
+              return DropdownMenuItem<String>(
+                value: gn,
+                child: Text(gn, style: const TextStyle(fontFamily: 'UNGanganee')),
+              );
+            }).toList(),
+            onChanged: (String? val) {
+              setState(() {
+                _selectedGnDivision = val;
+              });
+              
+              // 🔴 Update the ViewModel immediately
+              context.read<SurveyViewModel>().updateLocation(_localAuthority, val);
+            },
+          ),
         ],
       ),
     );
@@ -357,8 +563,10 @@ class _FamilyStepState extends State<FamilyStep> {
 
         if (!vm.isBusy && survey.houseNumber.isNotEmpty) ...[
           
-          // 🟢 මෙහි Update Log එක පෙන්වනු ලබයි
           _buildUpdateLog(survey.updatedBy, survey.updatedAt),
+          const SizedBox(height: 24),
+
+          _buildLocationCard(vm),
           const SizedBox(height: 24),
 
           _buildCard(

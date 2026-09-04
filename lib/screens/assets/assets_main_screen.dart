@@ -4,8 +4,16 @@ import '../../core/app_theme.dart';
 import '../../core/app_constants.dart';
 import 'assets_view_model.dart';
 
-class AssetsMainScreen extends StatelessWidget {
+class AssetsMainScreen extends StatefulWidget {
   const AssetsMainScreen({super.key});
+
+  @override
+  State<AssetsMainScreen> createState() => _AssetsMainScreenState();
+}
+
+class _AssetsMainScreenState extends State<AssetsMainScreen> {
+  // නිශ්චල හෝ චංචල බොත්තම් වලින් එකක් හෝ එබුවාද යන්න සටහන් කරගන්නා විචල්‍යය
+  bool _hasVisitedAssetPage = false;
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +25,6 @@ class AssetsMainScreen extends StatelessWidget {
         backgroundColor: AppColors.white,
         elevation: 0,
         leading: IconButton(
-          // Changed to primary (Green) to match theme, or keep lightBlue if you prefer
           icon: const Icon(Icons.arrow_back_ios, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
@@ -38,55 +45,88 @@ class AssetsMainScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildNavButton(context, 'නිශ්චල', () {
-                Navigator.pushNamed(
+              _buildNavButton(context, 'නිශ්චල', () async {
+                await Navigator.pushNamed(
                   context,
                   Routes.assetsImmovable,
                   arguments: vm.houseNumber,
                 );
+                // ආපසු ආ පසු බොත්තම සක්‍රීය කරයි
+                if (mounted) {
+                  setState(() => _hasVisitedAssetPage = true);
+                }
               }),
               const SizedBox(height: 30),
-              _buildNavButton(context, 'චංචල', () {
-                Navigator.pushNamed(
+              _buildNavButton(context, 'චංචල', () async {
+                await Navigator.pushNamed(
                   context,
                   Routes.assetsMovable,
                   arguments: vm.houseNumber,
                 );
+                // ආපසු ආ පසු බොත්තම සක්‍රීය කරයි
+                if (mounted) {
+                  setState(() => _hasVisitedAssetPage = true);
+                }
               }),
+              
               const SizedBox(height: 80),
+              
               SizedBox(
-                width: 200,
+                width: double.infinity, // බොත්තම තිරයේ පළලටම දිස්වීමට
                 height: 55,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    // 🔥 CHANGED: AppColors.secondary -> AppColors.primary (This makes it Green)
-                    backgroundColor: AppColors.primary, 
+                    // 🟢 බොත්තම සක්‍රීය නම් කොළ පාට, අක්‍රීය නම් අළු පාට පෙන්වීමට
+                    backgroundColor: _hasVisitedAssetPage 
+                        ? AppColors.primary 
+                        : Colors.grey.shade400, 
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                     elevation: 0,
                   ),
-                  onPressed: () async {
-                    // Next Page logic
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'තොරතුරු සුරැකිණි!',
-                          style: TextStyle(
-                            fontFamily: 'UNSamantha', 
-                            color: AppColors.white, 
-                            fontWeight: FontWeight.bold
+                  onPressed: () {
+                    // 🟢 බොත්තම් දෙකෙන් එකක් හෝ ඔබා ඇත්නම් පමණක් ක්‍රියාත්මක වේ
+                    if (_hasVisitedAssetPage) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'සියලුම තොරතුරු සාර්ථකව සුරැකිණි!',
+                            style: TextStyle(
+                              fontFamily: 'UNSamantha', 
+                              color: AppColors.white, 
+                              fontWeight: FontWeight.bold
+                            ),
                           ),
+                          backgroundColor: AppColors.success,
                         ),
-                        backgroundColor: AppColors.success,
-                      ),
-                    );
+                      );
+                      
+                      // 🟢 සියලුම පිටු වසා දමා පළමු පිටුවටම (Home / First Page) යාම
+                      Navigator.popUntil(context, (route) => route.isFirst);
+                      
+                    } else {
+                      // 🟢 එසේ නොමැති නම් අනතුරු ඇඟවීමක් පෙන්වයි
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'කරුණාකර ඉදිරියට යාමට පෙර නිශ්චල හෝ චංචල දේපල තොරතුරු පරීක්ෂා කරන්න.',
+                            style: TextStyle(
+                              fontFamily: 'UNSamantha', 
+                              color: Colors.white, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
                   },
                   child: const Text(
-                    'ඊළඟ පිටුවට',
+                    'අවසන් කර මුල් පිටුවට යන්න',
                     style: TextStyle(
                       fontFamily: 'UNSamantha',
-                      fontSize: 24,
+                      fontSize: 20,
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
                     ),
@@ -113,7 +153,6 @@ class AssetsMainScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: AppColors.white,
           borderRadius: BorderRadius.circular(12),
-          // 🔥 CHANGED: AppColors.secondary -> AppColors.primary (Makes border Green)
           border: Border.all(color: AppColors.primary, width: 2), 
         ),
         alignment: Alignment.center,

@@ -16,28 +16,19 @@ class SurveyViewModel extends ChangeNotifier {
 
   static const _requestTimeout = Duration(seconds: 15);
 
-  // Helper function to parse dates in multiple formats
   DateTime? _parseDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return null;
-
     try {
-      // Try removing common prefixes
       String cleanDate = dateStr
           .replaceAll('පිෂමග්: ', '')
           .replaceAll('Birth Date: ', '')
           .trim();
-
       return DateTime.parse(cleanDate);
     } catch (e) {
       return null;
     }
   }
 
-  /// Adds people saved on the Basic Details screen to the survey family.
-  ///
-  /// The family data and basic details are stored in the same Firestore
-  /// document, but in different fields. Loading both here means children and
-  /// other members entered in Basic Details are visible on this screen too.
   Future<Survey> _mergeBasicDetailsMembers(
     Survey sourceSurvey,
     String houseNumber,
@@ -57,9 +48,8 @@ class SurveyViewModel extends ChangeNotifier {
         }
       }
 
-      // අලුත් members ලිස්ට් එකෙන් දත්ත ලබා ගැනීම
       for (final member in basicDetails.members) {
-        final name = member.fullName.trim(); // name වෙනුවට fullName භාවිතා වේ
+        final name = member.fullName.trim(); 
         if (name.isEmpty) continue;
 
         addIfMissing(
@@ -68,7 +58,7 @@ class SurveyViewModel extends ChangeNotifier {
             name: name,
             nic: member.nic.trim(),
             gender: member.gender,
-            birthday: _parseDate(member.dob) ?? DateTime.now(), // dateOfBirth වෙනුවට dob 
+            birthday: _parseDate(member.dob) ?? DateTime.now(), 
           ),
         );
       }
@@ -78,8 +68,6 @@ class SurveyViewModel extends ChangeNotifier {
         family: sourceSurvey.family.copyWith(members: members),
       );
     } catch (e) {
-      // The saved survey can still be displayed when Basic Details is absent
-      // or temporarily unavailable.
       debugPrint('Error loading BasicDetails members: $e');
       return sourceSurvey;
     }
@@ -107,7 +95,6 @@ class SurveyViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Try to get existing survey first
       final existingSurvey = await _surveys
           .getSurveyByHouseNumber(query)
           .timeout(_requestTimeout);
@@ -115,17 +102,14 @@ class SurveyViewModel extends ChangeNotifier {
       if (existingSurvey != null) {
         survey = await _mergeBasicDetailsMembers(existingSurvey, query);
       } else {
-        // Get members from both voters and BasicDetails
         List<FamilyMember> allMembers = [];
 
-        // 1. Fetch from BasicDetails (all members added by user)
         try {
           final basicDetails = await _surveys
               .getBasicDetails(query)
               .timeout(_requestTimeout);
               
           if (basicDetails != null) {
-            // තනි members ලිස්ට් එකෙන් සියලුම සාමාජිකයින් එකතු කිරීම
             for (var member in basicDetails.members) {
               final dob = _parseDate(member.dob) ?? DateTime.now();
               allMembers.add(
@@ -140,15 +124,12 @@ class SurveyViewModel extends ChangeNotifier {
             }
           }
         } catch (e) {
-          // BasicDetails might not exist yet, continue
           debugPrint('Error loading BasicDetails: $e');
         }
 
-        // 2. Fetch from Voter Registry
         try {
           final voters = await _voters.findByHouse(query).timeout(_requestTimeout);
           for (var voter in voters) {
-            // Check if this voter is already in allMembers (by NIC)
             final exists = allMembers.any((m) => m.nic == voter.nic);
             if (!exists) {
               allMembers.add(
@@ -158,21 +139,15 @@ class SurveyViewModel extends ChangeNotifier {
                   gender: voter.gender.isEmpty
                       ? 'පුරුෂ'
                       : (voter.gender == 'F' ? 'ස්ත්‍රී' : 'පුරුෂ'),
-                  birthday: DateTime(
-                    1990,
-                    1,
-                    1,
-                  ), // Default birthday for voters without specific date
+                  birthday: DateTime(1990, 1, 1), 
                 ),
               );
             }
           }
         } catch (e) {
-          // Voter registry might not have data, continue
           debugPrint('Error loading voters: $e');
         }
 
-        // 3. Create survey with combined members
         if (allMembers.isEmpty) {
           error = 'මෙම ගෘහ අංකයට අදාළ දත්ත හමු නොවීය.';
           survey = survey.copyWith(houseNumber: query);
@@ -185,20 +160,28 @@ class SurveyViewModel extends ChangeNotifier {
       }
     } on TimeoutException {
       error = 'දත්ත ලබාගැනීමට වැඩි කාලයක් ගත විය. කරුණාකර නැවත උත්සාහ කරන්න.';
-      debugPrint('Search timed out for house: $query');
     } catch (e) {
       error = 'දත්ත සෙවීමේදී දෝෂයක් මතු විය: $e';
-      debugPrint('Search error: $e');
     } finally {
       isBusy = false;
       notifyListeners();
     }
   }
 
-  // Refresh members for current house number (useful when coming back from editing)
   Future<void> refreshMembers() async {
     if (survey.houseNumber.isEmpty) return;
     await searchHouse(survey.houseNumber);
+  }
+
+  // 🔴 NEW: This function catches the Location Data from the UI dropdowns
+  void updateLocation(String? localAuthority, String? gnDivision) {
+    survey = survey.copyWith(
+      family: survey.family.copyWith(
+        localAuthority: localAuthority ?? '',
+        gnDivision: gnDivision ?? '',
+      ),
+    );
+    notifyListeners();
   }
 
   void toggleAswasuma(bool value) {
@@ -258,6 +241,8 @@ class SurveyViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Calls your repository to save. 
+      // Remember to update your survey_repository.dart to handle localAuthority and gnDivision!
       await _surveys.saveFamilyDetails(survey.houseNumber, survey.family);
       return true;
     } catch (e) {
