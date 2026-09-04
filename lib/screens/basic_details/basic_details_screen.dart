@@ -103,6 +103,36 @@ class _BasicDetailsScreenState extends State<BasicDetailsScreen> {
                     tilePadding: EdgeInsets.zero,
                     initiallyExpanded: true,
                     children: [
+                      // 🟢 ADDED GUIDE FOR RADIO BUTTONS 🟢
+                      if (details.members.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.blue.shade200),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.info_outline, color: Colors.blue.shade700, size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'ගෘහ මූලිකයා තේරීම සඳහා අදාළ සාමාජිකයාගේ නම ඉදිරියෙන් ඇති රවුම (Radio button) මත ක්ලික් කරන්න.',
+                                  style: TextStyle(
+                                    fontFamily: 'UNGanganee',
+                                    fontSize: 13,
+                                    color: Colors.blue.shade800,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       if (details.members.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8.0),
