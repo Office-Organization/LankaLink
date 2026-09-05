@@ -34,7 +34,7 @@ class GNSummaryViewModel extends ChangeNotifier {
       for (var doc in snapshot.docs) {
         final data = doc.data();
         if (data['gnDivision'] != null && data['gnDivision'].toString().isNotEmpty) {
-          gns.add(data['gnDivision'].toString());
+          gns.add(data['gnDivision'].toString().trim());
         }
       }
       gnDivisions = gns.toList()..sort();
@@ -75,10 +75,9 @@ class GNSummaryViewModel extends ChangeNotifier {
     return null; 
   }
 
-  // 🔥 අතිශය නිවැරදිව "නැත" හඳුනාගන්නා ලොජික් එක (Bulletproof check)
   bool _isNo(dynamic val) {
-    if (val == null) return true; // දත්ත නැත්නම් ඒකත් "නැත"
-    if (val is bool) return !val; // false නම් "නැත"
+    if (val == null) return true; 
+    if (val is bool) return !val; 
     
     final str = val.toString().trim().toLowerCase();
     if (str.isEmpty || 
@@ -93,7 +92,7 @@ class GNSummaryViewModel extends ChangeNotifier {
   }
 
   Future<void> generateReport(String gn) async {
-    selectedGN = gn;
+    selectedGN = gn.trim();
     isGenerating = true;
     reportData.clear();
     allFamilies.clear();
@@ -101,6 +100,7 @@ class GNSummaryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // 1. Basic Survey Data Collection
       final snapshot = await FirebaseFirestore.instance
           .collection('survey_responses')
           .where('gnDivision', isEqualTo: selectedGN)
@@ -131,7 +131,6 @@ class GNSummaryViewModel extends ChangeNotifier {
         if (hasAswasuma) aswasumaCount++;
         if ((data['specialNeedsCount'] ?? 0) > 0) specialNeedsFamilyCount++;
 
-        // Basic Details Check
         if (data['basicDetails'] is Map) {
           final basicDetails = Map<String, dynamic>.from(data['basicDetails']);
           data['basicDetails'] = basicDetails;
@@ -175,7 +174,6 @@ class GNSummaryViewModel extends ChangeNotifier {
           }
         }
 
-        // Income Details Check
         if (data['incomeDetails'] is Map) {
           final inc = data['incomeDetails'] as Map;
           bool hasNoJob = _isNo(inc['jobType']); 
@@ -188,7 +186,6 @@ class GNSummaryViewModel extends ChangeNotifier {
           if (!_isNo(inc['fishingType'])) fishingFamilies++;
         }
 
-        // 🔥 නිවාස දත්ත විශ්ලේෂණය (Fail-proof)
         Map<dynamic, dynamic> hs = {};
         if (data.containsKey('housingDetails') && data['housingDetails'] is Map) {
           hs = data['housingDetails'] as Map;
@@ -198,18 +195,90 @@ class GNSummaryViewModel extends ChangeNotifier {
         bool hasNoElectricity = _isNo(hs['electricity']);
         bool hasNoWater = _isNo(hs['water']);
 
-        // නිවසක් නොමැති නම්
         if (hasNoHouse) {
           noHousingCount++;
         }
         
-        // විදුලිය හෝ ජලය නොමැති නම්
         if (hasNoElectricity || hasNoWater) {
           noWaterPowerCount++;
         }
 
         allFamilies.add(data);
       }
+
+      // ======================================================================
+      // NEW COLLECTIONS DATA FETCHING 
+      // ======================================================================
+
+      int canalsCount = 0;
+      int communityHallsCount = 0;
+      double totalRoadDistance = 0.0;
+      Set<String> disasterTypes = {};
+
+      // A. Agriculture Data -> Canals (ඇළ මාර්ග)
+      try {
+        final agriSnap = await FirebaseFirestore.instance.collection('agriculture_data').where('gn_division', isEqualTo: selectedGN).get();
+        for (var doc in agriSnap.docs) {
+          final d = doc.data();
+          final inf = d['agriculture_infrastructure'];
+          if (inf != null && inf is Map) {
+            if (inf['development_category'] == 'ඇළ මාර්ග') {
+              canalsCount++;
+            }
+          }
+        }
+      } catch (e) { debugPrint('Agriculture Data Fetch Error: $e'); }
+
+      // B. Daily Facilities -> Community Halls (ප්‍රජා ශාලා)
+      try {
+        final dailySnap = await FirebaseFirestore.instance.collection('daily_facilities_data').where('gn_division', isEqualTo: selectedGN).get();
+        for (var doc in dailySnap.docs) {
+          final d = doc.data();
+          final fac = d['daily_facilities'];
+          if (fac != null && fac is Map) {
+            if (fac['facility_type'] == 'ප්‍රජා ශාලා') {
+              communityHallsCount++;
+            }
+          }
+        }
+      } catch (e) { debugPrint('Daily Facilities Fetch Error: $e'); }
+
+      // C. Infrastructure Data -> Roads Distance Total (සංවර්ධනය විය යුතු මාර්ග)
+      try {
+        final infraSnap = await FirebaseFirestore.instance.collection('infrastructure_data').where('gn_division', isEqualTo: selectedGN).get();
+        for (var doc in infraSnap.docs) {
+          final d = doc.data();
+          final road = d['roads_infrastructure'];
+          if (road != null && road is Map) {
+            final distStr = road['development_distance']?.toString() ?? '0';
+            totalRoadDistance += double.tryParse(distStr) ?? 0.0;
+          }
+        }
+      } catch (e) { debugPrint('Infrastructure Fetch Error: $e'); }
+
+      // D. Disasters Data -> Disaster Types (ආපදා තොරතුරු) - FULLY FIXED
+      try {
+        final disSnap = await FirebaseFirestore.instance.collection('disasters_data').where('gn_division', isEqualTo: selectedGN).get();
+        for (var doc in disSnap.docs) {
+          final d = doc.data();
+          
+          final info = d['disaster_information'];
+          if (info != null && info is Map) {
+            final dt = info['disaster_type']?.toString() ?? '';
+            final affectedFams = info['affected_families_count']?.toString() ?? '0';
+            
+            if (dt.trim().isNotEmpty) {
+              disasterTypes.add('${dt.trim()} (බලපෑමට ලක්වූ පවුල්: $affectedFams)');
+            }
+          }
+        }
+      } catch (e) { debugPrint('Disaster Fetch Error: $e'); }
+
+      String disasterInfoStr = disasterTypes.isNotEmpty ? disasterTypes.join('\n') : 'තොරතුරු නොමැත';
+
+      // ======================================================================
+      // MERGING ALL DATA FOR REPORT
+      // ======================================================================
 
       reportData = {
         'totalFamilies': totalFamilies,
@@ -226,11 +295,15 @@ class GNSummaryViewModel extends ChangeNotifier {
         'dropouts': schoolDropouts,
         'noIncomeGovtAid': noIncomeGovtAid,
         'noIncomeNoGovtAid': noIncomeNoGovtAid,
-        'noHousingCount': noHousingCount, // 🟢 දැන් නිවැරදිව ගණනය වේ
-        'noWaterPowerCount': noWaterPowerCount, // 🟢 දැන් නිවැරදිව ගණනය වේ
+        'noHousingCount': noHousingCount, 
+        'noWaterPowerCount': noWaterPowerCount, 
         'agriFamilies': agriFamilies,
         'animalFamilies': animalFamilies,
         'fishingFamilies': fishingFamilies,
+        'canalsCount': canalsCount,
+        'communityHallsCount': communityHallsCount,
+        'totalRoadDistance': totalRoadDistance.toStringAsFixed(2),
+        'disasterInfo': disasterInfoStr,
       };
 
       displayedFamilies = List<Map<String, dynamic>>.from(allFamilies);
@@ -292,7 +365,6 @@ class GNSummaryViewModel extends ChangeNotifier {
         if (family.containsKey('housingDetails') && family['housingDetails'] is Map) {
           hs = family['housingDetails'] as Map;
         }
-        // 🔥 ෆිල්ටර් එකෙත් නිවැරදිම ලොජික් එක
         if (!_isNo(hs['hasHouse'])) return false; 
       }
 
