@@ -99,7 +99,6 @@ class _HousingScreenState extends State<HousingScreen> {
                   // නව View/Edit ලොජික් එක ඇතුළත් කළ නිවාස තොරතුරු කොටස
                   _buildHousingSection(details, vm),
 
-               
                   _buildUpdateLog(details.updatedBy, details.updatedAt),
 
                   const SizedBox(height: 40),
@@ -231,6 +230,7 @@ class _HousingScreenState extends State<HousingScreen> {
             'ස්ථිර තනි',
             'අර්ධ ස්ථිර',
             'තාවකාලික',
+            'ලැයින් කාමර', // 🟢 Added Line House here
           ],
           onChanged: (val) => vm.updateField(nature: val),
         ),

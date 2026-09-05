@@ -272,7 +272,10 @@ class _DailyFacilitiesFormViewState extends State<_DailyFacilitiesFormView> {
                     label: 'පහසුකම් වර්ගය තෝරන්න:',
                     hint: 'තෝරන්න',
                     value: viewModel.selectedFacilityType,
-                    items: viewModel.facilityTypes,
+                    // 🟢 ViewModel එකේ 'ප්‍රජා ශාලා' නොමැති නම් මෙතනින් අලුතින් ලිස්ට් එකට එකතු වේ
+                    items: viewModel.facilityTypes.contains('ප්‍රජා ශාලා')
+                        ? viewModel.facilityTypes
+                        : [...viewModel.facilityTypes, 'ප්‍රජා ශාලා'],
                     onChanged: (val) => viewModel.updateFacilityType(val),
                   ),
                   const SizedBox(height: 20),
