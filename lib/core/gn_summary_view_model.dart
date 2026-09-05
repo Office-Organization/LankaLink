@@ -100,7 +100,7 @@ class GNSummaryViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Basic Survey Data Collection
+      // 1. Basic Survey Data Collection for the selected GN Division
       final snapshot = await FirebaseFirestore.instance
           .collection('survey_responses')
           .where('gnDivision', isEqualTo: selectedGN)
@@ -121,6 +121,7 @@ class GNSummaryViewModel extends ChangeNotifier {
       int noIncomeNoGovtAid = 0;
       int noHousingCount = 0;
       int noWaterPowerCount = 0;
+      int wathuNiwasaCount = 0; 
       int agriFamilies = 0;
       int animalFamilies = 0;
       int fishingFamilies = 0;
@@ -131,6 +132,7 @@ class GNSummaryViewModel extends ChangeNotifier {
         if (hasAswasuma) aswasumaCount++;
         if ((data['specialNeedsCount'] ?? 0) > 0) specialNeedsFamilyCount++;
 
+        // Basic Details
         if (data['basicDetails'] is Map) {
           final basicDetails = Map<String, dynamic>.from(data['basicDetails']);
           data['basicDetails'] = basicDetails;
@@ -174,6 +176,7 @@ class GNSummaryViewModel extends ChangeNotifier {
           }
         }
 
+        // Income Details
         if (data['incomeDetails'] is Map) {
           final inc = data['incomeDetails'] as Map;
           bool hasNoJob = _isNo(inc['jobType']); 
@@ -186,6 +189,7 @@ class GNSummaryViewModel extends ChangeNotifier {
           if (!_isNo(inc['fishingType'])) fishingFamilies++;
         }
 
+        // Housing Details
         Map<dynamic, dynamic> hs = {};
         if (data.containsKey('housingDetails') && data['housingDetails'] is Map) {
           hs = data['housingDetails'] as Map;
@@ -203,17 +207,22 @@ class GNSummaryViewModel extends ChangeNotifier {
           noWaterPowerCount++;
         }
 
+        if (hs['nature']?.toString().trim() == 'ලැයින් කාමර') {
+          wathuNiwasaCount++;
+        }
+
         allFamilies.add(data);
       }
 
       // ======================================================================
-      // NEW COLLECTIONS DATA FETCHING 
+      // OTHER COLLECTIONS DATA FETCHING 
       // ======================================================================
 
       int canalsCount = 0;
       int communityHallsCount = 0;
       double totalRoadDistance = 0.0;
       Set<String> disasterTypes = {};
+      Set<String> touristAttractions = {}; // 🟢 NEW: Tourist Attractions
 
       // A. Agriculture Data -> Canals (ඇළ මාර්ග)
       try {
@@ -256,7 +265,7 @@ class GNSummaryViewModel extends ChangeNotifier {
         }
       } catch (e) { debugPrint('Infrastructure Fetch Error: $e'); }
 
-      // D. Disasters Data -> Disaster Types (ආපදා තොරතුරු) - FULLY FIXED
+      // D. Disasters Data -> Disaster Types (ආපදා තොරතුරු)
       try {
         final disSnap = await FirebaseFirestore.instance.collection('disasters_data').where('gn_division', isEqualTo: selectedGN).get();
         for (var doc in disSnap.docs) {
@@ -274,7 +283,30 @@ class GNSummaryViewModel extends ChangeNotifier {
         }
       } catch (e) { debugPrint('Disaster Fetch Error: $e'); }
 
+      // E. Tourist Attractions Data (සංචාරක කර්මාන්තය) - 🟢 NEW
+      try {
+        final touristSnap = await FirebaseFirestore.instance.collection('tourist_attractions_data').where('gn_division', isEqualTo: selectedGN).get();
+        for (var doc in touristSnap.docs) {
+          final d = doc.data();
+          
+          final info = d['tourist_attraction'];
+          if (info != null && info is Map) {
+            final locName = info['location_name']?.toString() ?? '';
+            final reason = info['development_needs']?.toString() ?? '';
+            
+            if (locName.trim().isNotEmpty) {
+              String entry = locName.trim();
+              if (reason.trim().isNotEmpty) {
+                entry += ' - ${reason.trim()}';
+              }
+              touristAttractions.add(entry);
+            }
+          }
+        }
+      } catch (e) { debugPrint('Tourist Attractions Fetch Error: $e'); }
+
       String disasterInfoStr = disasterTypes.isNotEmpty ? disasterTypes.join('\n') : 'තොරතුරු නොමැත';
+      String touristAttractionsStr = touristAttractions.isNotEmpty ? touristAttractions.join('\n') : 'තොරතුරු නොමැත'; // 🟢 NEW String
 
       // ======================================================================
       // MERGING ALL DATA FOR REPORT
@@ -297,6 +329,7 @@ class GNSummaryViewModel extends ChangeNotifier {
         'noIncomeNoGovtAid': noIncomeNoGovtAid,
         'noHousingCount': noHousingCount, 
         'noWaterPowerCount': noWaterPowerCount, 
+        'wathuNiwasaCount': wathuNiwasaCount, 
         'agriFamilies': agriFamilies,
         'animalFamilies': animalFamilies,
         'fishingFamilies': fishingFamilies,
@@ -304,6 +337,7 @@ class GNSummaryViewModel extends ChangeNotifier {
         'communityHallsCount': communityHallsCount,
         'totalRoadDistance': totalRoadDistance.toStringAsFixed(2),
         'disasterInfo': disasterInfoStr,
+        'touristAttractions': touristAttractionsStr, // 🟢 Added to Map
       };
 
       displayedFamilies = List<Map<String, dynamic>>.from(allFamilies);

@@ -263,9 +263,12 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
             _buildTableRow('9. වසමට අනන්‍ය වු සංවර්ධනය කළ හැකි කර්මාන්ත', 'තොරතුරු නොමැත'),
             _buildTableRow('10. නිවාස පහසුකම් නොමැති පවුල් ගණන', d['noHousingCount']?.toString() ?? '0'),
             _buildTableRow('11. විදුලිය හා ජල පහසුකම් නොමැති පවුල් ගණන', d['noWaterPowerCount']?.toString() ?? '0'),
-            _buildTableRow('12. වතු නිවාස ගණන', 'තොරතුරු නොමැත'),
+            _buildTableRow('12. වතු නිවාස ගණන (ලැයින් කාමර)', d['wathuNiwasaCount']?.toString() ?? '0'),
             _buildTableRow('13. වැවිලි කර්මාන්තයේ නිරත පවුල් ගණන', 'තොරතුරු නොමැත'),
-            _buildTableRow('14. සංචාරක කර්මාන්තය නගා සිටුවීම සඳහා ඇති අවස්ථාවන්', 'තොරතුරු නොමැත'),
+            
+            // 🟢 UPDATED: Tourist Attractions Info
+            _buildTableRow('14. සංචාරක කර්මාන්තය නගා සිටුවීම සඳහා ඇති අවස්ථාවන්', d['touristAttractions']?.toString() ?? 'තොරතුරු නොමැත'),
+            
             _buildTableRow('15. කෘෂිකාර්මික පවුල් ගණන', d['agriFamilies']?.toString() ?? '0'),
             _buildTableRow('16. සංවර්ධනය කළ යුතු වාරි මාර්ග පද්ධති ගණන (ඇළ මාර්ග)', d['canalsCount']?.toString() ?? '0'),
             _buildTableRow('17. සත්ත්ව නිෂ්පාදනයට අදාළ රැකියාවල නිරත පවුල් ගණන', d['animalFamilies']?.toString() ?? '0'),
@@ -280,8 +283,6 @@ class _GNSummaryReportViewState extends State<_GNSummaryReportView> {
             _buildTableRow('26. වසමේ සංවර්ධනය විය යුතු මාර්ග (කි.මි. ගණන)', d['totalRoadDistance']?.toString() ?? '0'),
             _buildTableRow('27. විශේෂ කර්මාන්තයක් ආරම්භ කිරිමට කැමත්තක් දක්වන පුද්ගලයින්', 'තොරතුරු නොමැත'),
             _buildTableRow('28. සමාජ විරෝධි ක්‍රියාකාරකම් පිළිබඳ තොරතුරු (පවුල් ගණන)', d['antiSocial']?.toString() ?? '0'),
-            
-            // 🟢 Disasters Info
             _buildTableRow('29. ආපදා තොරතුරු', d['disasterInfo']?.toString() ?? 'තොරතුරු නොමැත'),
           ],
         ),

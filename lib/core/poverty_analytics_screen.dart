@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'female_headed_summary_screen.dart';
 import 'special_needs_summary_screen.dart';
-import 'aswasuma_summary_screen.dart'; // අලුත් පිටුව Import කරගන්න
+import 'aswasuma_summary_screen.dart'; 
+import 'no_income_summary_screen.dart'; 
+import 'fisheries_summary_screen.dart'; 
+import 'no_water_electricity_summary_screen.dart'; 
+import 'animal_husbandry_summary_screen.dart'; // අලුත් පිටුව Import කරගන්න
 
 class PovertyAnalyticsScreen extends StatelessWidget {
   const PovertyAnalyticsScreen({super.key});
@@ -43,20 +47,31 @@ class PovertyAnalyticsScreen extends StatelessWidget {
             context: context,
             title: 'අස්වැසුම ප්‍රතිලාභින',
             subtitle: 'Aswasuma beneficiaries (Poor, Extreme Poor, etc.)',
-            // අලුත් පිටුවට මෙතැනින් Link කර ඇත
             targetScreen: const AswasumaSummaryScreen(), 
           ),
           _buildExportCard(
             context: context,
             title: 'ආදායම් මාර්ගයක් නොමැති පවුල්',
             subtitle: 'Families without an income source',
-            targetScreen: null, 
+            targetScreen: const NoIncomeSummaryScreen(), 
           ),
           _buildExportCard(
             context: context,
-            title: 'කෘෂිකර්මික / ධීවර පවුල්',
-            subtitle: 'Agriculture & Fisheries families',
-            targetScreen: null, 
+            title: 'ධීවර පවුල්',
+            subtitle: 'Fisheries families',
+            targetScreen: const FisheriesSummaryScreen(), 
+          ),
+          _buildExportCard(
+            context: context,
+            title: 'විදුලිය හා ජලය නොමැති පවුල්',
+            subtitle: 'Families without electricity & water',
+            targetScreen: const NoWaterElectricitySummaryScreen(),
+          ),
+          _buildExportCard(
+            context: context,
+            title: 'සත්ත්ව පාලනයේ නිරත පවුල්',
+            subtitle: 'Animal husbandry families',
+            targetScreen: const AnimalHusbandrySummaryScreen(), // Linked here
           ),
         ],
       ),

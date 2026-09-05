@@ -23,6 +23,8 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
   List<Map<String, dynamic>> _filteredRecords = [];
   
   final TextEditingController _searchController = TextEditingController();
+  String _selectedGN = "සියලුම GN වසම්";
+  List<String> _gnList = ["සියලුම GN වසම්"];
 
   @override
   void initState() {
@@ -36,11 +38,11 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
     super.dispose();
   }
 
-  // 1. Database එකෙන් සියලුම දත්ත ගෙන ඒම
   Future<void> _fetchData() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('survey_responses').get();
       List<Map<String, dynamic>> extracted = [];
+      Set<String> gnSet = {"සියලුම GN වසම්"};
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
@@ -54,25 +56,25 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
             final headName = headMember['fullName']?.toString() ?? basicDetails['headName']?.toString() ?? '-';
             final houseNumber = data['houseNumber']?.toString() ?? basicDetails['houseNumber']?.toString() ?? '-';
             final phone = basicDetails['phone']?.toString() ?? '-';
-            final gnDivision = data['gn_division']?.toString() ?? basicDetails['gn_division']?.toString() ?? 'නොදනී';
+            final gnDivision = data['gnDivision']?.toString() ?? basicDetails['gn_division']?.toString() ?? basicDetails['gnDivision']?.toString() ?? 'නොදනී';
+            
+            if (gnDivision != 'නොදනී' && gnDivision.isNotEmpty) {
+              gnSet.add(gnDivision);
+            }
 
-            // අස්වැසුම
             final aswasuma = data['hasAswasuma'] == true ? 'ඔව්' : 'නැත';
             
-            // නිවාස පහසුකම්
             final housingDetails = data['housingDetails'] as Map<String, dynamic>? ?? {};
             final hNature = housingDetails['nature']?.toString() ?? '-';
             final hWater = housingDetails['water']?.toString() ?? '-';
             final hElec = housingDetails['electricity']?.toString() ?? '-';
             final housingStr = 'ස්වභාවය: $hNature\nජලය: $hWater\nවිදුලිය: $hElec';
 
-            // ආදායම් මාර්ග (ඔබ ලබා දුන් ආකෘති පත්‍රයට අනුව)
             final incomeDetails = data['incomeDetails'] as Map<String, dynamic>? ?? {};
             
             final mainIncome = incomeDetails['mainIncome']?.toString() ?? '-';
             final extraIncome = incomeDetails['extraIncome']?.toString() ?? '-';
             
-            // රැකියාව (තනතුර සහ ආයතනය)
             final jobType = incomeDetails['jobType']?.toString() ?? '-';
             final jobPosition = incomeDetails['jobPosition']?.toString() ?? '-';
             final jobInstitute = incomeDetails['jobInstitute']?.toString() ?? '-';
@@ -84,17 +86,14 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
               if (jobInstitute.isNotEmpty && jobInstitute != '-') jobStr += '\nආයතනය: $jobInstitute';
             }
 
-            // සංචාරක
             final tourismType = incomeDetails['tourismType']?.toString() ?? '-';
             final tourismOther = incomeDetails['tourismOther']?.toString() ?? '';
             final tourismStr = tourismType != '-' && tourismType.isNotEmpty ? (tourismType == 'වෙනත්' ? 'සංචාරක: $tourismOther' : 'සංචාරක: $tourismType') : '-';
 
-            // කෘෂිකර්ම
             final agricultureType = incomeDetails['agricultureType']?.toString() ?? '-';
             final agriOther = incomeDetails['agricultureOther']?.toString() ?? '';
             final agriStr = agricultureType != '-' && agricultureType.isNotEmpty ? (agricultureType == 'වෙනත්' ? 'කෘෂි: $agriOther' : 'කෘෂි: $agricultureType') : '-';
 
-            // සත්ත්ව නිෂ්පාදන
             final animalType = incomeDetails['animalHusbandryType']?.toString() ?? '-';
             final animalCount = incomeDetails['animalCount']?.toString() ?? '';
             final animalOther = incomeDetails['animalHusbandryOther']?.toString() ?? '';
@@ -104,11 +103,9 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
               if (animalCount.isNotEmpty && animalCount != '-') animalStr += ' (සංඛ්‍යාව: $animalCount)';
             }
 
-            // ධීවර නිෂ්පාදන
             final fishingType = incomeDetails['fishingType']?.toString() ?? '-';
             final fishingStr = fishingType != '-' && fishingType.isNotEmpty ? 'ධීවර: $fishingType' : '-';
 
-            // PDF Table එක සඳහා සියලුම ආදායම් විස්තර එකට එකතු කිරීම
             List<String> fullIncomeSummary = [];
             if (mainIncome != '-' && mainIncome.isNotEmpty) fullIncomeSummary.add('ප්‍රධාන ආදායම: $mainIncome');
             if (extraIncome != '-' && extraIncome.isNotEmpty) fullIncomeSummary.add('අමතර ආදායම: $extraIncome');
@@ -120,7 +117,6 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
 
             final finalIncomeStr = fullIncomeSummary.isNotEmpty ? fullIncomeSummary.join('\n') : '-';
 
-            // ළමයින්ගේ දත්ත
             List<String> childNames = [];
             List<String> childGenders = [];
             List<String> childAges = [];
@@ -156,9 +152,10 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
       if (mounted) {
         setState(() {
           _allRecords = extracted;
-          _filteredRecords = extracted;
+          _gnList = gnSet.toList();
           _isLoading = false;
         });
+        _applyFilters();
       }
     } catch (e) {
       if (mounted) {
@@ -174,20 +171,26 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
     List<Map<String, dynamic>> temp = _allRecords;
     final query = _searchController.text.trim().toLowerCase();
     
-    if (query.isNotEmpty) {
-      temp = temp.where((record) {
+    temp = temp.where((record) {
+      if (_selectedGN != "සියලුම GN වසම්" && record['gn'] != _selectedGN) {
+        return false;
+      }
+      
+      if (query.isNotEmpty) {
         final name = record['name'].toString().toLowerCase();
         final houseNo = record['houseNumber'].toString().toLowerCase();
-        return name.contains(query) || houseNo.contains(query);
-      }).toList();
-    }
+        if (!name.contains(query) && !houseNo.contains(query)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
 
     setState(() {
       _filteredRecords = temp;
     });
   }
 
-  // 2. PDF එක Generate කිරීම
   Future<void> _generatePDF() async {
     if (_filteredRecords.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -272,29 +275,69 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => _applyFilters(),
-                    decoration: InputDecoration(
-                      hintText: 'නම හෝ ගෘහ මූලික අංකය සොයන්න...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7C3AED)),
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                  child: Column(
+                    children: [
+                      // Dropdown for GN
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedGN,
+                            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7C3AED)),
+                            items: _gnList.map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(
+                                  value,
+                                  style: TextStyle(
+                                    color: value == "සියලුම GN වසම්" ? Colors.grey.shade700 : Colors.black87,
+                                    fontWeight: value == "සියලුම GN වසම්" ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (newValue) {
+                              setState(() {
+                                _selectedGN = newValue!;
+                                _applyFilters();
+                              });
+                            },
+                          ),
+                        ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      // Search field
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (value) => _applyFilters(),
+                        decoration: InputDecoration(
+                          hintText: 'නම හෝ ගෘහ මූලික අංකය සොයන්න...',
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7C3AED)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF7C3AED)),
+                          ),
+                        ),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF7C3AED)),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
 
@@ -354,6 +397,7 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
                                       ),
                                       const Divider(height: 20),
+                                      _buildSummaryRow(Icons.location_on_outlined, 'GN වසම:', record['gn']),
                                       _buildSummaryRow(Icons.home_outlined, 'ගෘහ මූලික අංකය:', record['houseNumber']),
                                       _buildSummaryRow(Icons.phone_outlined, 'දුරකථනය:', record['phone']),
                                       _buildSummaryRow(Icons.work_outline, 'ආදායම් මාර්ග සහ රැකියාව:', record['finalIncomeStr'].replaceAll('\n', ' | ')),
@@ -372,23 +416,23 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
             ],
           ),
 
-          // 4. PDF සඳහා පමණක් Render වන සඟවා ඇති විශාල Table එක
+          // PDF Table
           if (_filteredRecords.isNotEmpty)
             Positioned(
               left: -99999,
               child: RepaintBoundary(
                 key: _pdfTableKey,
                 child: Container(
-                  width: 1500, // තීරු වැඩි නිසා පළල තවදුරටත් වැඩි කර ඇත
+                  width: 1500,
                   color: Colors.white,
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        '1 ඇමුණුම් අංක 01',
-                        style: TextStyle(fontSize: 14, color: Colors.black, fontFamily: 'AbhayaLibre'),
+                      Text(
+                        '1 ඇමුණුම් අංක 01 - GN: $_selectedGN',
+                        style: const TextStyle(fontSize: 14, color: Colors.black, fontFamily: 'AbhayaLibre'),
                       ),
                       const SizedBox(height: 4),
                       const Text(
@@ -399,16 +443,16 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
                       Table(
                         border: TableBorder.all(color: Colors.black, width: 0.8),
                         columnWidths: const {
-                          0: FlexColumnWidth(2.0), // නම
-                          1: FlexColumnWidth(1.0), // අංකය
-                          2: FlexColumnWidth(1.2), // දුරකතන
-                          3: FlexColumnWidth(2.5), // සියලුම ආදායම් මාර්ග සහ රැකියාව
-                          4: FlexColumnWidth(0.8), // අස්වැසුම
-                          5: FlexColumnWidth(1.8), // නිවාස පහසුකම්
-                          6: FlexColumnWidth(1.2), // ළමයින් සිටීද
-                          7: FlexColumnWidth(1.8), // ළමයින්ගේ නම්
-                          8: FlexColumnWidth(1.0), // ස්ත්‍රී/පුරුෂ
-                          9: FlexColumnWidth(0.8), // වයස
+                          0: FlexColumnWidth(2.0),
+                          1: FlexColumnWidth(1.0),
+                          2: FlexColumnWidth(1.2),
+                          3: FlexColumnWidth(2.5),
+                          4: FlexColumnWidth(0.8),
+                          5: FlexColumnWidth(1.8),
+                          6: FlexColumnWidth(1.2),
+                          7: FlexColumnWidth(1.8),
+                          8: FlexColumnWidth(1.0),
+                          9: FlexColumnWidth(0.8),
                         },
                         children: [
                           TableRow(
@@ -432,7 +476,7 @@ class _FemaleHeadedSummaryScreenState extends State<FemaleHeadedSummaryScreen> {
                                 _buildTableCell(row['name']!),
                                 _buildTableCell(row['houseNumber']!),
                                 _buildTableCell(row['phone']!),
-                                _buildTableCell(row['finalIncomeStr']!), // සියලුම ආදායම් විස්තර
+                                _buildTableCell(row['finalIncomeStr']!),
                                 _buildTableCell(row['aswasuma']!),
                                 _buildTableCell(row['housingStr']!),
                                 _buildTableCell(row['hasSchoolChildren']!),

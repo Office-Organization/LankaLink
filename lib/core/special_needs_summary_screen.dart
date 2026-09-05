@@ -23,6 +23,8 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
   List<Map<String, dynamic>> _filteredRecords = [];
 
   final TextEditingController _searchController = TextEditingController();
+  String _selectedGN = "සියලුම GN වසම්";
+  List<String> _gnList = ["සියලුම GN වසම්"];
 
   @override
   void initState() {
@@ -36,18 +38,17 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
     super.dispose();
   }
 
-  // 1. Firestore එකෙන් විශේෂ අවශ්‍යතා සහිත දත්ත පමණක් Filter කර ලබා ගැනීම
   Future<void> _fetchData() async {
     try {
       final snapshot = await FirebaseFirestore.instance.collection('survey_responses').get();
       List<Map<String, dynamic>> extracted = [];
+      Set<String> gnSet = {"සියලුම GN වසම්"};
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final basicDetails = data['basicDetails'] as Map<String, dynamic>? ?? {};
         final members = data['members'] as List<dynamic>? ?? [];
 
-        // විශේෂ අවශ්‍යතා තිබේදැයි පරීක්ෂා කිරීම
         final int specialNeedsCount = (data['specialNeedsCount'] is num)
             ? (data['specialNeedsCount'] as num).toInt()
             : int.tryParse(data['specialNeedsCount']?.toString() ?? '0') ?? 0;
@@ -58,13 +59,17 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
             : double.tryParse(data['specialNeedsAmount']?.toString() ?? '0') ?? 0.0;
 
         if (specialNeedsCount > 0 || specialNeedDesc.isNotEmpty || specialNeedsAmount > 0) {
-          // මූලික විස්තර
+          
           final headMember = members.isNotEmpty ? members[0] as Map<String, dynamic> : null;
           final headName = headMember?['fullName']?.toString() ?? basicDetails['headName']?.toString() ?? '-';
           final houseNumber = data['houseNumber']?.toString() ?? basicDetails['houseNumber']?.toString() ?? '-';
           final phone = basicDetails['phone']?.toString() ?? '-';
+          
+          final gnDivision = data['gnDivision']?.toString() ?? basicDetails['gn_division']?.toString() ?? basicDetails['gnDivision']?.toString() ?? 'නොදනී';
+          if (gnDivision != 'නොදනී' && gnDivision.isNotEmpty) {
+            gnSet.add(gnDivision);
+          }
 
-          // ආදායම / රැකියාව
           final incomeDetails = data['incomeDetails'] as Map<String, dynamic>? ?? {};
           final jobType = incomeDetails['jobType']?.toString() ?? '';
           final mainIncome = incomeDetails['mainIncome']?.toString() ?? '';
@@ -75,16 +80,13 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
             incomeStr = 'ආදායම: $mainIncome';
           }
 
-          // රජයේ ආධාරයේ ප්‍රභවය
           final govSource = data['govAidSource']?.toString() ?? 
               (basicDetails['receivesGovtAssistance'] == true ? 'මධ්‍යම රජය' : 'පළාත් සභා');
 
-          // වගා නොකරන ලද ඉඩම්
           final assetsDetails = data['assetsDetails'] as Map<String, dynamic>? ?? {};
           final uncultivatedLand = assetsDetails['uncultivatedLand']?.toString() ?? 
               data['uncultivatedLand']?.toString() ?? 'නැත';
 
-          // වෙනත් කරුණු
           final otherRemarks = data['otherRemarks']?.toString() ?? '-';
 
           extracted.add({
@@ -97,6 +99,7 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
             'govSource': govSource,
             'uncultivatedLand': uncultivatedLand,
             'other': otherRemarks,
+            'gn': gnDivision,
           });
         }
       }
@@ -104,9 +107,10 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
       if (mounted) {
         setState(() {
           _allRecords = extracted;
-          _filteredRecords = extracted;
+          _gnList = gnSet.toList();
           _isLoading = false;
         });
+        _applyFilters();
       }
     } catch (e) {
       if (mounted) {
@@ -122,20 +126,26 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
     List<Map<String, dynamic>> temp = _allRecords;
     final query = _searchController.text.trim().toLowerCase();
 
-    if (query.isNotEmpty) {
-      temp = temp.where((record) {
+    temp = temp.where((record) {
+      if (_selectedGN != "සියලුම GN වසම්" && record['gn'] != _selectedGN) {
+        return false;
+      }
+      
+      if (query.isNotEmpty) {
         final name = record['name'].toString().toLowerCase();
         final houseNo = record['houseNumber'].toString().toLowerCase();
-        return name.contains(query) || houseNo.contains(query);
-      }).toList();
-    }
+        if (!name.contains(query) && !houseNo.contains(query)) {
+          return false;
+        }
+      }
+      return true;
+    }).toList();
 
     setState(() {
       _filteredRecords = temp;
     });
   }
 
-  // 2. PDF එක Generate කිරීම
   Future<void> _generatePDF() async {
     if (_filteredRecords.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -220,29 +230,69 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
                 Container(
                   color: Colors.white,
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: (value) => _applyFilters(),
-                    decoration: InputDecoration(
-                      hintText: 'නම හෝ ගෘහ මූලික අංකය සොයන්න...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7C3AED)),
-                      filled: true,
-                      fillColor: const Color(0xFFF8FAFC),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                  child: Column(
+                    children: [
+                      // Dropdown for GN
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedGN,
+                            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7C3AED)),
+                            items: _gnList.map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(
+                                  value,
+                                  style: TextStyle(
+                                    color: value == "සියලුම GN වසම්" ? Colors.grey.shade700 : Colors.black87,
+                                    fontWeight: value == "සියලුම GN වසම්" ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (newValue) {
+                              setState(() {
+                                _selectedGN = newValue!;
+                                _applyFilters();
+                              });
+                            },
+                          ),
+                        ),
                       ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      const SizedBox(height: 12),
+                      // Search Field
+                      TextField(
+                        controller: _searchController,
+                        onChanged: (value) => _applyFilters(),
+                        decoration: InputDecoration(
+                          hintText: 'නම හෝ ගෘහ මූලික අංකය සොයන්න...',
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF7C3AED)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF7C3AED)),
+                          ),
+                        ),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: Color(0xFF7C3AED)),
-                      ),
-                    ),
+                    ],
                   ),
                 ),
 
@@ -302,11 +352,11 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
                                         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1E293B)),
                                       ),
                                       const Divider(height: 20),
+                                      _buildSummaryRow(Icons.location_on_outlined, 'GN වසම:', record['gn']),
                                       _buildSummaryRow(Icons.home_outlined, 'ගෘහ මූලික අංකය:', record['houseNumber']),
                                       _buildSummaryRow(Icons.phone_outlined, 'දුරකථනය:', record['phone']),
                                       _buildSummaryRow(Icons.accessible_forward_rounded, 'ආබාධිත තත්ත්වය:', record['disability']),
                                       _buildSummaryRow(Icons.monetization_on_outlined, 'රජයේ ආධාරය (රු.):', record['aidAmount']),
-                                      // "ආධාර ලබාදෙන්නේ" පේළිය ඉවත් කරන ලදි.
                                       _buildSummaryRow(Icons.work_outline, 'ආදායම/රැකියාව:', record['income']),
                                     ],
                                   ),
@@ -318,7 +368,7 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
             ],
           ),
 
-          // 4. PDF එක සඳහා පමණක් Render වන සඟවා ඇති Table එක
+          // PDF Table
           if (_filteredRecords.isNotEmpty)
             Positioned(
               left: -99999,
@@ -332,23 +382,23 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Text(
-                        '2 විශේෂ අවශ්‍යතා සහිත පවුල් (ඇමුණුම් අංක 2)',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre'),
+                      Text(
+                        '2 විශේෂ අවශ්‍යතා සහිත පවුල් (ඇමුණුම් අංක 2) - GN: $_selectedGN',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre'),
                       ),
                       const SizedBox(height: 14),
                       Table(
                         border: TableBorder.all(color: Colors.black, width: 0.8),
                         columnWidths: const {
-                          0: FlexColumnWidth(2.0), // නම
-                          1: FlexColumnWidth(1.0), // ගෘහ මූලික අංකය / ලිපිනය
-                          2: FlexColumnWidth(1.2), // දුරකතන අංකය
-                          3: FlexColumnWidth(1.3), // පවුලේ ආදායම
-                          4: FlexColumnWidth(1.6), // ආබාධය කුමක්ද යන්න
-                          5: FlexColumnWidth(1.4), // රජයේ ආධාරයේ වටිනාකම
-                          6: FlexColumnWidth(1.6), // මධ්‍යම රජයේද / පළාත් සභාද
-                          7: FlexColumnWidth(1.8), // වගා නොකරන ලද ඉඩම්
-                          8: FlexColumnWidth(1.2), // වෙනත්
+                          0: FlexColumnWidth(2.0),
+                          1: FlexColumnWidth(1.0),
+                          2: FlexColumnWidth(1.2),
+                          3: FlexColumnWidth(1.3),
+                          4: FlexColumnWidth(1.6),
+                          5: FlexColumnWidth(1.4),
+                          6: FlexColumnWidth(1.6),
+                          7: FlexColumnWidth(1.8),
+                          8: FlexColumnWidth(1.2),
                         },
                         children: [
                           TableRow(
@@ -374,7 +424,7 @@ class _SpecialNeedsSummaryScreenState extends State<SpecialNeedsSummaryScreen> {
                                 _buildTableCell(row['income']!),
                                 _buildTableCell(row['disability']!),
                                 _buildTableCell(row['aidAmount']!),
-                                _buildTableCell(row['govSource']!), // PDF එකේ පමණක් පෙන්වීමට ඉතිරි කර ඇත
+                                _buildTableCell(row['govSource']!), 
                                 _buildTableCell(row['uncultivatedLand']!),
                                 _buildTableCell(row['other']!),
                               ],

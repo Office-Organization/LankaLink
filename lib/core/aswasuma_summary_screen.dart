@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import 'member_detail_screen.dart'; // අලුතින් හැදූ පිටුව Import කරගන්න
+import 'member_detail_screen.dart'; 
 
 class AswasumaSummaryScreen extends StatefulWidget {
   const AswasumaSummaryScreen({super.key});
@@ -20,10 +20,20 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
   bool _isDownloading = false;
   final GlobalKey _pdfTableKey = GlobalKey();
 
+  // Master lists
+  List<Map<String, dynamic>> _allPoorRecords = [];
+  List<Map<String, dynamic>> _allExtremePoorRecords = [];
+  List<Map<String, dynamic>> _allAtRiskRecords = [];
+  List<Map<String, dynamic>> _allTransitionalRecords = [];
+
+  // Filtered lists
   List<Map<String, dynamic>> _poorRecords = [];
   List<Map<String, dynamic>> _extremePoorRecords = [];
   List<Map<String, dynamic>> _atRiskRecords = [];
   List<Map<String, dynamic>> _transitionalRecords = [];
+
+  String _selectedGN = "සියලුම GN වසම්";
+  List<String> _gnList = ["සියලුම GN වසම්"];
 
   @override
   void initState() {
@@ -39,6 +49,7 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
       List<Map<String, dynamic>> tempExtreme = [];
       List<Map<String, dynamic>> tempAtRisk = [];
       List<Map<String, dynamic>> tempTransitional = [];
+      Set<String> gnSet = {"සියලුම GN වසම්"};
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
@@ -57,8 +68,12 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
           final uncultivatedLand = assetsDetails['uncultivatedLand']?.toString() ?? data['uncultivatedLand']?.toString() ?? 'නැත';
           
           final category = data['aswasumaCategory']?.toString() ?? basicDetails['aswasumaCategory']?.toString() ?? 'දුප්පත්';
+          
+          final gnDivision = data['gnDivision']?.toString() ?? basicDetails['gn_division']?.toString() ?? basicDetails['gnDivision']?.toString() ?? 'නොදනී';
+          if (gnDivision != 'නොදනී' && gnDivision.isNotEmpty) {
+            gnSet.add(gnDivision);
+          }
 
-          // අලුත් පිටුවට යවන්න සම්පූර්ණ දත්ත 'rawData' ලෙස මෙතැන Save කරගන්නවා
           final recordData = {
             'name': headName,
             'phone': phone,
@@ -66,7 +81,8 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
             'income': income,
             'aidAmount': aidAmount,
             'uncultivatedLand': uncultivatedLand,
-            'rawData': data, // <-- මෙය ඉතා වැදගත්!
+            'gn': gnDivision,
+            'rawData': data, 
           };
 
           if (category.contains('අන්ත')) {
@@ -83,12 +99,14 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
 
       if (mounted) {
         setState(() {
-          _poorRecords = tempPoor;
-          _extremePoorRecords = tempExtreme;
-          _atRiskRecords = tempAtRisk;
-          _transitionalRecords = tempTransitional;
+          _allPoorRecords = tempPoor;
+          _allExtremePoorRecords = tempExtreme;
+          _allAtRiskRecords = tempAtRisk;
+          _allTransitionalRecords = tempTransitional;
+          _gnList = gnSet.toList();
           _isLoading = false;
         });
+        _applyFilters();
       }
     } catch (e) {
       if (mounted) {
@@ -98,6 +116,22 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
         );
       }
     }
+  }
+
+  void _applyFilters() {
+    setState(() {
+      if (_selectedGN == "සියලුම GN වසම්") {
+        _poorRecords = List.from(_allPoorRecords);
+        _extremePoorRecords = List.from(_allExtremePoorRecords);
+        _atRiskRecords = List.from(_allAtRiskRecords);
+        _transitionalRecords = List.from(_allTransitionalRecords);
+      } else {
+        _poorRecords = _allPoorRecords.where((r) => r['gn'] == _selectedGN).toList();
+        _extremePoorRecords = _allExtremePoorRecords.where((r) => r['gn'] == _selectedGN).toList();
+        _atRiskRecords = _allAtRiskRecords.where((r) => r['gn'] == _selectedGN).toList();
+        _transitionalRecords = _allTransitionalRecords.where((r) => r['gn'] == _selectedGN).toList();
+      }
+    });
   }
 
   Future<void> _generatePDF() async {
@@ -169,21 +203,65 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
         children: [
           _isLoading
               ? const Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED)))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildUiSection('දුප්පත්', _poorRecords, Colors.blue),
-                      _buildUiSection('අන්ත දුප්පත්', _extremePoorRecords, Colors.red),
-                      _buildUiSection('අවදානම් සහගත පවුල්', _atRiskRecords, Colors.orange),
-                      _buildUiSection('සංක්‍රාන්තික පවුල්', _transitionalRecords, Colors.purple),
-                      const SizedBox(height: 40),
-                    ],
-                  ),
+              : Column(
+                  children: [
+                    // Dynamic GN Division Dropdown
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _selectedGN,
+                            icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF7C3AED)),
+                            items: _gnList.map((String value) {
+                              return DropdownMenuItem<String>(
+                                value: value,
+                                child: Text(
+                                  value,
+                                  style: TextStyle(
+                                    color: value == "සියලුම GN වසම්" ? Colors.grey.shade700 : Colors.black87,
+                                    fontWeight: value == "සියලුම GN වසම්" ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (newValue) {
+                              setState(() {
+                                _selectedGN = newValue!;
+                                _applyFilters();
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildUiSection('දුප්පත්', _poorRecords, Colors.blue),
+                            _buildUiSection('අන්ත දුප්පත්', _extremePoorRecords, Colors.red),
+                            _buildUiSection('අවදානම් සහගත පවුල්', _atRiskRecords, Colors.orange),
+                            _buildUiSection('සංක්‍රාන්තික පවුල්', _transitionalRecords, Colors.purple),
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
 
-          // PDF Tables
+          // PDF Tables (Hidden)
           Positioned(
             left: -99999,
             child: RepaintBoundary(
@@ -196,7 +274,7 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('3 අස්වැසුම ප්‍රතිලාභින ගණන (ඇමුණුම් අංක 3)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre')),
+                    Text('3 අස්වැසුම ප්‍රතිලාභින ගණන (ඇමුණුම් අංක 3) - GN: $_selectedGN', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black, fontFamily: 'AbhayaLibre')),
                     const SizedBox(height: 20),
                     _buildPdfTableSection('දුප්පත්', _poorRecords),
                     const SizedBox(height: 24),
@@ -244,9 +322,8 @@ class _AswasumaSummaryScreenState extends State<AswasumaSummaryScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               elevation: 0,
-              clipBehavior: Clip.antiAlias, // InkWell splash පෙනෙන්න
+              clipBehavior: Clip.antiAlias, 
               child: InkWell(
-                // නම මත Click කළ විට අලුත් පිටුවට rawData යවයි
                 onTap: () {
                   Navigator.push(
                     context,
